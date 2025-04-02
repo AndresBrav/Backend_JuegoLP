@@ -1,9 +1,15 @@
 import express, { Request, Response, Router } from 'express';
+import  usuariosController from '../Controllers/usuariosController'
 
 const router: Router = express.Router();
 
-router.get('/', (req: Request, res: Response) => {
-    res.send("Hola, estás probando la ruta");
-});
+router.get('/', usuariosController.consultar);
+
+router.post('/', usuariosController.ingresar);
+
+router.route("/:id")
+    .get(usuariosController.consultarDetalle)
+    .put(usuariosController.actualizar)
+    .delete(usuariosController.borrar);
 
 export default router;
