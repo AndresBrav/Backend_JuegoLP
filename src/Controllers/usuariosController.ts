@@ -1,9 +1,16 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
+// import cors from "cors";
+import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
 
-// Función para consultar usuarios
-const consultar = async (req: Request, res: Response) => {
+
+const consultar =  async(req: AuthenticatedRequest, res: Response)=> {
     try {
-        res.send("hola este es el usuario actualizado");
+        console.log("Datos del token:", req.DatosToken?.username); // Sin await
+        
+        res.json({
+            username: `los datos son ${req.DatosToken.username}`
+        });
     } catch (err) {
         if (err instanceof Error) {
             res.status(500).send(err.message);
@@ -12,10 +19,13 @@ const consultar = async (req: Request, res: Response) => {
 };
 
 // Función para consultar detalles de un usuario
-const consultarDetalle = async (req: Request, res: Response) => {
+const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     try {
-        res.send(`Este es el id que se paso ${id}`)
+        res.json({ 
+            msg:`Este es el id que se paso ${id}`,
+            username: `los datos son ${req.DatosToken.username}`
+        })
         // Aquí puedes agregar la lógica para consultar los detalles del usuario con el id
     } catch (err) {
         if (err instanceof Error) {
