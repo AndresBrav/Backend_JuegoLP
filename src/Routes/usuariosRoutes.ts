@@ -1,15 +1,15 @@
 import express, { Request, Response, Router } from 'express';
-import  usuariosController from '../Controllers/usuariosController'
+import { consultar, consultarDetalle, ingresar, actualizar, borrar } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 
 const router: Router = express.Router();
 
-router.get('/', usuariosController.consultar);
+router.get('/',consultar);
 
-router.post('/', usuariosController.ingresar);
+router.post('/',ingresar);
 
 router.route("/:id")
-    .get(usuariosController.consultarDetalle)
-    .put(usuariosController.actualizar)
-    .delete(usuariosController.borrar);
+    .get(consultarDetalle)
+    .put(actualizar)
+    .delete(borrar);
 
 export default router;

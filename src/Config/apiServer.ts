@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import UsuariosRoutes from '../Routes/usuariosRoutes';
-
+import morgan from 'morgan';
 class ApiServer {
   private usuariosPath: string;
   private app: Application;
@@ -16,6 +16,7 @@ class ApiServer {
   private middlewares(): void {
     this.app.use(cors());
     this.app.use(express.json());
+    this.app.use(morgan('dev'))
     // this.app.use(express.static('public'));
   }
 
