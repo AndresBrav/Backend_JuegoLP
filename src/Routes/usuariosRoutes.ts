@@ -7,6 +7,20 @@ import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; 
 
 const router: Router = express.Router();
 
+interface Usuario{
+    id:number,
+    username:string,
+    edad:number
+}
+
+// Simular una "base de datos" con un arreglo
+const usuarios: Usuario[] = [
+    { id: 1, username: "Andres", edad: 25 },
+    { id: 2, username: "Maria", edad: 30 },
+    { id: 3, username: "Juan", edad: 22 },
+    { id: 4, username: "Sofia", edad: 28 }
+];
+
 router.get('/consultar',verifyToken,consultar);
 
 router.post('/ingresar',verifyToken,ingresar);
@@ -29,11 +43,17 @@ router.post("/login/usuario", (req: Request, res: Response): void => {
 
     const usuario = { id, username, edad };
 
+    //verificarLogin(usuario);
+
     // Crear un token con expiración
     const token = jwt.sign(usuario, "miSecreto", { expiresIn: "1h" });
 
     res.json({ token });
 });
+
+// const verificarLogin = () => {
+    
+// }
 
 // Ruta protegida que requiere token
 router.get("/protected/usuario", verifyToken, (req: AuthenticatedRequest, res: Response): void => {
