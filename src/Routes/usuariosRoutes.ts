@@ -75,14 +75,14 @@ router.get("/protected/usuario", verifyToken, (req: AuthenticatedRequest, res: R
 
 // Ruta para obtener datos del usuario desde el token
 router.get("/hola/usuario", verifyToken, (req: AuthenticatedRequest, res: Response): void => {
-    const { id, username } = req.DatosToken || {};
+    const { username,password } = req.DatosToken || {};
 
-    if (!id || !username) {
+    if (!password || !username) {
         res.status(400).json({ message: "Token inválido" });
         return;
     }
 
-    res.send(`El id del usuario es: ${id}, El username es: ${username}`);
+    res.send(`El id del usuario es: ${password}, El username es: ${username}`);
 });
 
 export default router;
