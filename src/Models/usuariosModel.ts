@@ -9,6 +9,9 @@ const Usuarios = db.define("Usuarios", {
     edad: {
         type: DataTypes.INTEGER
     },
+    password:{
+        type:DataTypes.STRING
+    }
 }
 );
 
