@@ -44,7 +44,7 @@ const ingresar = async (req: Request, res: Response) => {
         const { body } = req
         await Usuarios.create(body)
         res.json({
-            msg:'se creo correctamente el usuario'
+            msg: 'se creo correctamente el usuario'
         })
         // Aquí agregas la lógica para ingresar el usuario
     } catch (err) {
@@ -101,5 +101,57 @@ const borrar = async (req: Request, res: Response) => {
     }
 };
 
+interface Usuario {
+    username: string,
+    password: string
+}
+
+// Simular una "base de datos" con un arreglo
+// const usuarios: Usuario[] = [
+//     { username: "Andres", password: "123" },
+//     { username: "Maria", password: "456" },
+//     { username: "Juan", password: "789" },
+//     { username: "Sofia", password: "114" }
+// ];
+
+const verificarLogin = async (usuario:Usuario): Promise<boolean> => {
+    // const usuariosBD = await Usuarios.findAll({
+    //     attributes: ["username", "password"],
+    //     raw: true
+    // });
+    // console.log(usuariosBD);
+
+    // Usa la interfaz para tipar el resultado de findAll
+    const usuariosBD= await Usuarios.findAll({
+        attributes: ["username", "password"],
+        raw: true
+    });
+
+    // Convierte explícitamente a unknown y luego a Usuario[]
+    const usuarios = usuariosBD as unknown as Usuario[];
+
+    const UsuarioALogear:Usuario = usuario;
+    console.log("El usuario que se va a logear es:");
+    console.log(UsuarioALogear);
+
+    let registro: boolean = false;
+
+    // const usuarioA = usuarios[0];
+    // console.log(usuarioA.username)
+    // const username:string = username;
+
+    for (let i = 0; i < usuariosBD.length; i++) {
+        if (
+            usuarios[i].username === UsuarioALogear.username &&
+            usuarios[i].password === UsuarioALogear.password
+        ) {
+            registro = true;
+        }
+    }
+
+    return registro; // 🔁 esto hace internamente un `resolve(registro)`
+};
+
+
 // Exportar las funciones para usarlas en las rutas
-export { consultar, consultarDetalle, ingresar, actualizar, borrar };
+export { consultar, consultarDetalle, ingresar, actualizar, borrar, verificarLogin };

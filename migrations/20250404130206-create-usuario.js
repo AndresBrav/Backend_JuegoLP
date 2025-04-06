@@ -15,12 +15,15 @@ module.exports = {
       edad: {
         type: Sequelize.INTEGER
       },
+      password: {
+        type: Sequelize.STRING
+      },
       createdAt: {
-        allowNull: false,
+        allowNull: true,
         type: Sequelize.DATE
       },
       updatedAt: {
-        allowNull: false,
+        allowNull: true,
         type: Sequelize.DATE
       }
     });
