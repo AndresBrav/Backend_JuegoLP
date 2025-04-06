@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from 'express';
-import { consultar, consultarDetalle, ingresar, actualizar, borrar, verificarLogin } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
+import { consultar, consultarDetalle, ingresar, actualizar, borrar,RegistrarLogin, verificarLogin } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
@@ -23,10 +23,10 @@ router.route("/detalles/:id")
     .put(verifyToken, actualizar)        // Aplica verifyToken al método PUT
     .delete(verifyToken, borrar);
 
-
+router.post("/login/registrar",RegistrarLogin);
 
 //Ruta para obtener un token
-router.post("/login/usuario", async(req: Request, res: Response) => {
+router.post("/login/iniciar", async(req: Request, res: Response) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -34,7 +34,7 @@ router.post("/login/usuario", async(req: Request, res: Response) => {
         return;
     }
 
-    const usuario: Usuario = {  username, password };
+    const usuario:Usuario= {  username, password };
 
     let existe = await verificarLogin(usuario);                   //verifica que el usuario exista en la BD
     console.log(existe)

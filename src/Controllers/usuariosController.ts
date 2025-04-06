@@ -106,23 +106,45 @@ interface Usuario {
     password: string
 }
 
-// Simular una "base de datos" con un arreglo
-// const usuarios: Usuario[] = [
-//     { username: "Andres", password: "123" },
-//     { username: "Maria", password: "456" },
-//     { username: "Juan", password: "789" },
-//     { username: "Sofia", password: "114" }
-// ];
+// Función para ingresar un nuevo usuario
+const RegistrarLogin = async (req: Request, res: Response) => {
+    const { username, edad, password } = req.body;
 
-const verificarLogin = async (usuario:Usuario): Promise<boolean> => {
-    // const usuariosBD = await Usuarios.findAll({
-    //     attributes: ["username", "password"],
-    //     raw: true
-    // });
-    // console.log(usuariosBD);
+    if (!username || !password || !edad) {
+        res.status(400).json({ message: "Faltan datos en la solicitud" });
+        return;
+    }
+    // const usuario:Usuario = { username, password };
+    if (typeof username === 'string' && typeof password === 'string') {
+        console.log("los datos son de tipo string")
+        const usuario = { username, edad, password }
+        await Usuarios.create(usuario)  //lo crea en la base de datos
+
+        const UsuarioA = { username, password }
+
+        const UsuarioArevisar: Usuario = UsuarioA
+        let existe = await verificarLogin(UsuarioArevisar);
+        // console.log(existe)
+        if (existe) {
+            //Crear un token con expiración
+            const token = jwt.sign(UsuarioArevisar, "miSecreto", { expiresIn: "1h" });
+            res.json({ token });
+        }
+        else {
+            res.json({ msg: 'el usuario que ingresaste no existe Registrate' })
+        }
+    }
+    else {
+        res.json({ msg: "Ingresa correctamente el usuario" })
+    }
+
+};
+
+
+const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
 
     // Usa la interfaz para tipar el resultado de findAll
-    const usuariosBD= await Usuarios.findAll({
+    const usuariosBD = await Usuarios.findAll({
         attributes: ["username", "password"],
         raw: true
     });
@@ -130,15 +152,12 @@ const verificarLogin = async (usuario:Usuario): Promise<boolean> => {
     // Convierte explícitamente a unknown y luego a Usuario[]
     const usuarios = usuariosBD as unknown as Usuario[];
 
-    const UsuarioALogear:Usuario = usuario;
+    const UsuarioALogear: Usuario = usuario;
     console.log("El usuario que se va a logear es:");
     console.log(UsuarioALogear);
 
     let registro: boolean = false;
 
-    // const usuarioA = usuarios[0];
-    // console.log(usuarioA.username)
-    // const username:string = username;
 
     for (let i = 0; i < usuariosBD.length; i++) {
         if (
@@ -154,4 +173,4 @@ const verificarLogin = async (usuario:Usuario): Promise<boolean> => {
 
 
 // Exportar las funciones para usarlas en las rutas
-export { consultar, consultarDetalle, ingresar, actualizar, borrar, verificarLogin };
+export { consultar, consultarDetalle, ingresar, actualizar, borrar, RegistrarLogin, verificarLogin };
