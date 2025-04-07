@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
 import Usuarios from "../Models/usuariosModel"
+import { Usuario } from "../interfaces/Usuario";
 
 const consultar = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -101,10 +102,6 @@ const borrar = async (req: Request, res: Response) => {
     }
 };
 
-interface Usuario {
-    username: string,
-    password: string
-}
 
 // Función para ingresar un nuevo usuario
 const RegistrarLogin = async (req: Request, res: Response) => {
