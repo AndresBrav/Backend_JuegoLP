@@ -1,12 +1,18 @@
+import * as dotenv from 'dotenv';
+dotenv.config(); // ¡Esto carga el archivo .env!
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import UsuariosRoutes from '../Routes/usuariosRoutes';
 import morgan from 'morgan';
 
 import db from '../db/conexion'
+
+
+
 class ApiServer {
   private usuariosPath: string;
   private app: Application;
+  
 
   constructor() {
     this.app = express();
@@ -14,6 +20,7 @@ class ApiServer {
     this.middlewares();  // Llama a la función middleware
     this.routes();       // Registra las rutas
     this.dbConnet(); //conexion a la base de datos
+    
   }
 
   private middlewares(): void {
@@ -28,8 +35,9 @@ class ApiServer {
   }
 
   public escuchar(): void {
-    this.app.listen(3000, () => {
-      console.log('API REST iniciada en el puerto 3000');
+    const port = process.env.PORT || 4000;
+    this.app.listen(port, () => {
+      console.log(`API REST iniciada en el puerto ${port}`);
     });
   }
 

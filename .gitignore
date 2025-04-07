@@ -2,3 +2,4 @@
 /node_modules
 # Ignorar archivos de configuración del IDE
 .vscode/
+.env
