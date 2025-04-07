@@ -1,16 +1,18 @@
 import express, { Request, Response, Router } from 'express';
-import { consultar, consultarDetalle, ingresar, actualizar, borrar,RegistrarLogin, verificarLogin } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
+import { consultar, consultarDetalle, ingresar, actualizar, borrar, RegistrarLogin, verificarLogin } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
 
+import  {Usuario}  from '../interfaces/Usuario';
+
 
 const router: Router = express.Router();
 
-interface Usuario {
-    username: string,
-    password: string
-}
+// interface Usuario {
+//     username: string,
+//     password: string
+// }
 
 
 
@@ -23,10 +25,10 @@ router.route("/detalles/:id")
     .put(verifyToken, actualizar)        // Aplica verifyToken al método PUT
     .delete(verifyToken, borrar);
 
-router.post("/login/registrar",RegistrarLogin);
+router.post("/login/registrar", RegistrarLogin);
 
 //Ruta para obtener un token
-router.post("/login/iniciar", async(req: Request, res: Response) => {
+router.post("/login/iniciar", async (req: Request, res: Response) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -34,7 +36,7 @@ router.post("/login/iniciar", async(req: Request, res: Response) => {
         return;
     }
 
-    const usuario:Usuario= {  username, password };
+    const usuario: Usuario = { username, password };
 
     let existe = await verificarLogin(usuario);                   //verifica que el usuario exista en la BD
     console.log(existe)
@@ -49,24 +51,6 @@ router.post("/login/iniciar", async(req: Request, res: Response) => {
 
 });
 
-// const verificarLogin = (usuario: Usuario): boolean => {
-//     const UsuarioALogear: Usuario = usuario
-//     console.log("el usuario que se va logear es ")
-//     console.log(UsuarioALogear);
-
-//     let registro: boolean = false;
-
-//     // console.log("el numeros de usuarios es "+usuarios.length)
-//     for (let i = 0; i < usuarios.length; i++) {
-//         if (
-//             usuarios[i].username === UsuarioALogear.username &&
-//             usuarios[i].password === UsuarioALogear.password) {
-//             registro = true;
-//         }
-//     }
-
-//     return registro;
-// }
 
 // Ruta protegida que requiere token
 router.get("/protected/usuario", verifyToken, (req: AuthenticatedRequest, res: Response): void => {
@@ -75,7 +59,7 @@ router.get("/protected/usuario", verifyToken, (req: AuthenticatedRequest, res: R
 
 // Ruta para obtener datos del usuario desde el token
 router.get("/hola/usuario", verifyToken, (req: AuthenticatedRequest, res: Response): void => {
-    const { username,password } = req.DatosToken || {};
+    const { username, password } = req.DatosToken || {};
 
     if (!password || !username) {
         res.status(400).json({ message: "Token inválido" });
