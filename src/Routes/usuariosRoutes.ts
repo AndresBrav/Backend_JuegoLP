@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from 'express';
-import { consultar, consultarDetalle, ingresar, actualizar, borrar, RegistrarLogin, verificarLogin } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
+import { consultarUsuarios, consultarDetalle, ingresar, actualizar, borrar, RegistrarLogin, verificarLogin } from '../Controllers/usuariosController'; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
@@ -9,14 +9,7 @@ import  {Usuario}  from '../interfaces/Usuario';
 
 const router: Router = express.Router();
 
-// interface Usuario {
-//     username: string,
-//     password: string
-// }
-
-
-
-router.get('/consultar', verifyToken, consultar);
+router.get('/consultar', verifyToken, consultarUsuarios);
 
 router.post('/ingresar', verifyToken, ingresar);
 
