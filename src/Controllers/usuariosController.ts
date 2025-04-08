@@ -5,10 +5,13 @@ import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; 
 import Usuarios from "../Models/usuariosModel"
 import { Usuario } from "../interfaces/Usuario";
 
-const consultar = async (req: AuthenticatedRequest, res: Response) => {
+import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario } from '../Services/usuarioServices'
+
+
+const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
     try {
         console.log("Datos del token:", req.DatosToken?.username); // Sin await
-        const usuarios = await Usuarios.findAll();
+        const usuarios = await obtenerTodosLosUsuarios();  //llama al Servicio
         res.json({
             username: `los datos son ${req.DatosToken.username}`,
             msg: usuarios
@@ -20,16 +23,17 @@ const consultar = async (req: AuthenticatedRequest, res: Response) => {
     }
 };
 
+
 // Función para consultar detalles de un usuario
 const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
-    const product = await Usuarios.findByPk(id)
+    const usuario = await consultarDetalleUsuario(id)    //llama al servicio
     try {
         res.json({
             id: `Este es el id que se paso ${id}`,
             username: `los datos del token son ${req.DatosToken}`,
-            msg: product
+            msg: usuario
         })
         // Aquí puedes agregar la lógica para consultar los detalles del usuario con el id
     } catch (err) {
@@ -42,11 +46,26 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
 // Función para ingresar un nuevo usuario
 const ingresar = async (req: Request, res: Response) => {
     try {
-        const { body } = req
-        await Usuarios.create(body)
-        res.json({
-            msg: 'se creo correctamente el usuario'
-        })
+        const { username, edad, password } = req.body;
+        const datosCorrectos: boolean = await aniadirUsuario(username, edad, password)
+
+        // console.log("vamos a verificar")
+        // console.log(datosCorrectos)
+
+        if (datosCorrectos) {
+            res.json({
+                msg: 'se creo correctamente el usuario'
+            })
+
+        }
+        else {
+            res.json({
+                msg: 'ingresa correctamente los datos'
+            })
+        }
+
+
+
         // Aquí agregas la lógica para ingresar el usuario
     } catch (err) {
         if (err instanceof Error) {
@@ -170,4 +189,4 @@ const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
 
 
 // Exportar las funciones para usarlas en las rutas
-export { consultar, consultarDetalle, ingresar, actualizar, borrar, RegistrarLogin, verificarLogin };
+export { consultarUsuarios, consultarDetalle, ingresar, actualizar, borrar, RegistrarLogin, verificarLogin };
