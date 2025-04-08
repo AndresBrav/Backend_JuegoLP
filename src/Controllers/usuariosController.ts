@@ -5,7 +5,7 @@ import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; 
 import Usuarios from "../Models/usuariosModel"
 import { Usuario } from "../interfaces/Usuario";
 
-import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario } from '../Services/usuarioServices'
+import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario, actualizarUsuario } from '../Services/usuarioServices'
 
 
 const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
@@ -63,9 +63,6 @@ const ingresar = async (req: Request, res: Response) => {
                 msg: 'ingresa correctamente los datos'
             })
         }
-
-
-
         // Aquí agregas la lógica para ingresar el usuario
     } catch (err) {
         if (err instanceof Error) {
@@ -78,16 +75,29 @@ const ingresar = async (req: Request, res: Response) => {
 const actualizar = async (req: Request, res: Response) => {
 
     try {
-        const { id } = req.params
-        const { body } = req
+        // const { id } = req.params
+        // const { body } = req
 
-        const product = await Usuarios.findByPk(id)
-        if (product) {
-            await product.update(body)
+        // const product = await Usuarios.findByPk(id)
+        // if (product) {
+        //     await product.update(body)
+        //     res.json({
+        //         msg: " el producto fue actualizado con exito "
+        //     })
+        // }
+        const { id } = req.params
+        const { username, edad, password } = req.body;
+        const datosCorrectos: boolean = await actualizarUsuario(username, edad, password, id);
+
+        if (datosCorrectos) {
             res.json({
-                msg: " el producto fue actualizado con exito "
+                msg: " el usuario fue actualizado con exito "
             })
+        } else {
+            res.json("el usuario no se pudo actualizar")
         }
+
+
         // Aquí puedes agregar la lógica para actualizar el usuario con el id
     } catch (err) {
         if (err instanceof Error) {
