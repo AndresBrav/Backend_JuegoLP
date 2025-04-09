@@ -59,7 +59,7 @@ export const aniadirUsuario = async (username: any, edad: any, password: any): P
 
 export const actualizarUsuario = async (username: any, edad: any, password: any, id: string): Promise<boolean> => {
     const usuario = await Usuarios.findByPk(id);
-
+    
     if (!usuario) {
         throw new Error("Usuario no encontrado");
     }
