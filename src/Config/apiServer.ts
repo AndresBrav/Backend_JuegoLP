@@ -4,6 +4,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import UsuariosRoutes from '../Routes/usuariosRoutes';
 import morgan from 'morgan';
+// actualizado
 
 import db from '../db/conexion'
 
