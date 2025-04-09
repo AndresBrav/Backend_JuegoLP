@@ -1,19 +1,30 @@
 import { Usuario } from '../interfaces/Usuario';
-import Usuarios from "../Models/usuariosModel"
+// import Usuarios from "../Models/usuariosModel"
 
 import { UsuarioActualizado } from '../interfaces/Usuario';
 
 import { isString, isNumero } from '../Validations/validaciones';
 
-export const obtenerTodosLosUsuarios = async (): Promise<any> => {
-    const usuarios = await Usuarios.findAll();
-    if (!usuarios || usuarios.length === 0) {
-        throw new Error('No se encontraron usuarios');
-    }
-    return usuarios;
-}
 
-export const consultarDetalleUsuario = async (id: string): Promise<any> => {
+import Usuarios, { UsuariosInstance } from '../Models/usuariosModel'; // Asegúrate de que esta ruta sea correcta
+
+export const obtenerTodosLosUsuarios = async (): Promise<UsuariosInstance[]> => {
+  const usuarios = await Usuarios.findAll();
+  if (!usuarios || usuarios.length === 0) {
+    throw new Error('No se encontraron usuarios');
+  }
+  return usuarios;
+};
+
+// export const obtenerTodosLosUsuarios = async (): Promise<any> => {
+//     const usuarios = await Usuarios.findAll();
+//     if (!usuarios || usuarios.length === 0) {
+//         throw new Error('No se encontraron usuarios');
+//     }
+//     return usuarios;
+// }
+
+export const consultarDetalleUsuario = async (id: string): Promise<UsuariosInstance> => {
 
     // console.log("el parametro que se paso es "+isString(id))
     const tipoID = isString(id);
@@ -44,11 +55,6 @@ export const aniadirUsuario = async (username: any, edad: any, password: any): P
     }
 }
 
-// interface UsuarioActualizado {
-//     username?: string;
-//     edad?: number;
-//     password?: string;
-// }
 
 export const actualizarUsuario = async (username: any, edad: any, password: any, id: string): Promise<boolean> => {
     const usuario = await Usuarios.findByPk(id);
