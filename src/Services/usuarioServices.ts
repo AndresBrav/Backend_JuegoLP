@@ -30,7 +30,7 @@ export const consultarDetalleUsuario = async (id: string): Promise<UsuariosInsta
     const tipoID = isString(id);
 
     if (tipoID) {
-        const usuario = await Usuarios.findByPk(id)
+        const usuario:UsuariosInstance = await Usuarios.findByPk(id)
         return usuario;
     }
     else {
@@ -42,12 +42,13 @@ export const consultarDetalleUsuario = async (id: string): Promise<UsuariosInsta
 
 export const aniadirUsuario = async (username: any, edad: any, password: any): Promise<boolean> => {
     if (isNumero(edad) && isString(username) && isString(password)) {
-        const usuario = {
-            username,
-            edad,
-            password
-        };
-        await Usuarios.create(usuario)
+        const usuarioA:UsuarioActualizado ={username,edad,password}
+        // const usuario = {
+        //     username,
+        //     edad,
+        //     password
+        // };
+        await Usuarios.create(usuarioA)
         return true;
     }
     else {

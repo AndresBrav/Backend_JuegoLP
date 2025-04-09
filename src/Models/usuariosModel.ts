@@ -10,7 +10,7 @@ interface UsuariosAttributes {
 
 // Define una interfaz para la instancia del modelo
 export interface UsuariosInstance
-  extends Model<UsuariosAttributes>, // incluye métodos como .save(), .destroy(), etc.
+  extends Model<UsuariosAttributes>, // incluye métodos como .save(), .destroy(), etc. // Métodos de Sequelize con tipos
     UsuariosAttributes {}           // permite acceder directamente a username, edad, password
 
 // Define el modelo con los tipos específicos
