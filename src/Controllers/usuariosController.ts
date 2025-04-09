@@ -5,7 +5,7 @@ import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; 
 import Usuarios from "../Models/usuariosModel"
 import { Usuario } from "../interfaces/Usuario";
 
-import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario, actualizarUsuario } from '../Services/usuarioServices'
+import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario, actualizarUsuario, borrarUsuario } from '../Services/usuarioServices'
 
 
 const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
@@ -75,16 +75,7 @@ const ingresar = async (req: Request, res: Response) => {
 const actualizar = async (req: Request, res: Response) => {
 
     try {
-        // const { id } = req.params
-        // const { body } = req
 
-        // const product = await Usuarios.findByPk(id)
-        // if (product) {
-        //     await product.update(body)
-        //     res.json({
-        //         msg: " el producto fue actualizado con exito "
-        //     })
-        // }
         const { id } = req.params
         const { username, edad, password } = req.body;
         const datosCorrectos: boolean = await actualizarUsuario(username, edad, password, id);
@@ -111,16 +102,15 @@ const borrar = async (req: Request, res: Response) => {
     try {
         const { id } = req.params
 
-        const usuario = await Usuarios.findByPk(id)
+        const usuarioEliminado = await borrarUsuario(id)
 
-        if (!usuario) {
-            res.status(404).json({
-                msg: `no existe el usuario ${id}`
-            })
-        } else {
-            await usuario.destroy();
+        if (usuarioEliminado) {
             res.json({
                 msg: 'el usuario fue eliminado con exito'
+            })
+        } else {
+            res.status(404).json({
+                msg: `no existe el usuario ${id}`
             })
         }
         // Aquí agregas la lógica para borrar el usuario con el id
