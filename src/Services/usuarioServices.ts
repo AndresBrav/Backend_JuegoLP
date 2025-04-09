@@ -62,22 +62,37 @@ export const actualizarUsuario = async (username: any, edad: any, password: any,
         throw new Error("No se proporcionaron campos para actualizar");
     }
 
-    const usuarioActualizado: UsuarioActualizado  = {};
+    const usuarioActualizado: UsuarioActualizado = {};
+
+
 
     // Verificar si no es undefined antes de agregar al objeto
-    if (username !== undefined) {
+    if (username !== undefined && isString(username)) {
         usuarioActualizado.username = username;
     }
 
-    if (edad !== undefined && isNumero(edad) ) {
+    if (edad !== undefined && isNumero(edad)) {
         usuarioActualizado.edad = edad;
     }
 
-    if (password !== undefined) {
+    if (password !== undefined && isString(password)) {
         usuarioActualizado.password = password;
     }
 
     // Actualizamos el usuario con los campos que no son undefined
     await usuario.update(usuarioActualizado);
     return true;
+}
+
+export const borrarUsuario = async (id: string): Promise<boolean> => {
+    let resultado:boolean = false;
+    const usuario = await Usuarios.findByPk(id)
+    console.log("vamos a eliminar el usuario.........")
+
+    if (usuario !== null) {
+        console.log(usuario)
+        await usuario.destroy();
+        resultado=true;
+    }
+    return resultado;
 }
