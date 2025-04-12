@@ -6,7 +6,7 @@ import Usuarios from "../Models/usuariosModel"
 import { Usuario } from "../interfaces/Usuario";
 
 import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario, actualizarUsuario, borrarUsuario } from '../Services/usuarioServices'
-
+//mejorado
 
 const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
     try {
