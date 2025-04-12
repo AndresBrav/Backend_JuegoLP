@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
-import Usuarios from "../Models/usuariosModel"
+import User from "../Models/modeluser"
 import { Usuario } from "../interfaces/Usuario";
 
 import { obtenerTodosLosUsuarios, consultarDetalleUsuario, aniadirUsuario, actualizarUsuario, borrarUsuario } from '../Services/usuarioServices'
@@ -134,7 +134,7 @@ const RegistrarLogin = async (req: Request, res: Response) => {
     if (typeof username === 'string' && typeof password === 'string') {
         console.log("los datos son de tipo string")
         const usuario = { username, edad, password }
-        await Usuarios.create(usuario)  //lo crea en la base de datos
+        await User.create(usuario)  //lo crea en la base de datos
 
         const UsuarioA = { username, password }
 
@@ -160,7 +160,7 @@ const RegistrarLogin = async (req: Request, res: Response) => {
 const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
 
     // Usa la interfaz para tipar el resultado de findAll
-    const usuariosBD = await Usuarios.findAll({
+    const usuariosBD = await User.findAll({
         attributes: ["username", "password"],
         raw: true
     });
