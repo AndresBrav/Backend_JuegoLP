@@ -143,7 +143,7 @@ const RegistrarLogin = async (req: Request, res: Response) => {
         // console.log(existe)
         if (existe) {
             //Crear un token con expiración
-            const token = jwt.sign(UsuarioArevisar, "miSecreto", { expiresIn: "1h" });
+            const token = jwt.sign(UsuarioArevisar, "miSecreto", { expiresIn: "10m" });
             res.json({ token });
         }
         else {
