@@ -1,6 +1,5 @@
 import { DataTypes, Model, Sequelize } from 'sequelize';
 import db from '../db/conexion'; // Asegúrate de que esta ruta sea correcta
-import Carro from './modelcarro';
 
 // Define una interfaz para los atributos del modelo
 interface UsuariosAttributes {
@@ -15,7 +14,7 @@ export interface UsuariosInstance
     UsuariosAttributes {}           // permite acceder directamente a username, edad, password
 
 // Define el modelo con los tipos específicos
-const User = db.define<UsuariosInstance>('User', {
+const Usuarios = db.define<UsuariosInstance>('Usuarios', {
   username: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -30,14 +29,4 @@ const User = db.define<UsuariosInstance>('User', {
   },
 });
 
-User.hasMany(Carro, {
-  foreignKey: 'user_id',
-  sourceKey: 'id'
-});
-
-Carro.belongsTo(User, {
-  foreignKey: 'user_id',
-  targetKey: 'id'
-});
-
-export default User;
+export default Usuarios;

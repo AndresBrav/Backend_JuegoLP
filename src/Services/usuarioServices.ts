@@ -1,15 +1,16 @@
 import { Usuario } from '../interfaces/Usuario';
-import User from "../Models/modeluser"
+// import Usuarios from "../Models/usuariosModel"
 
 import { UsuarioActualizado } from '../interfaces/Usuario';
+import Usuarios,{UsuariosInstance} from '../Models/usuarioModel';
 
 import { isString, isNumero } from '../Validations/validaciones';
 
 
-import Usuarios, { UsuariosInstance } from '../Models/modeluser'; // Asegúrate de que esta ruta sea correcta
+
 
 export const obtenerTodosLosUsuarios = async (): Promise<UsuariosInstance[]> => {
-  const usuarios = await User.findAll();
+  const usuarios = await Usuarios.findAll();
   if (!usuarios || usuarios.length === 0) {
     throw new Error('No se encontraron usuarios');
   }
@@ -30,7 +31,7 @@ export const consultarDetalleUsuario = async (id: string): Promise<UsuariosInsta
     const tipoID = isString(id);
 
     if (tipoID) {
-        const usuario:UsuariosInstance = await User.findByPk(id)
+        const usuario:UsuariosInstance = await Usuarios.findByPk(id)
         return usuario;
     }
     else {
@@ -48,7 +49,7 @@ export const aniadirUsuario = async (username: any, edad: any, password: any): P
         //     edad,
         //     password
         // };
-        await User.create(usuarioA)
+        await Usuarios.create(usuarioA)
         return true;
     }
     else {
@@ -58,7 +59,7 @@ export const aniadirUsuario = async (username: any, edad: any, password: any): P
 
 
 export const actualizarUsuario = async (username: any, edad: any, password: any, id: string): Promise<boolean> => {
-    const usuario = await User.findByPk(id);
+    const usuario = await Usuarios.findByPk(id);
     
     if (!usuario) {
         throw new Error("Usuario no encontrado");
@@ -93,7 +94,7 @@ export const actualizarUsuario = async (username: any, edad: any, password: any,
 
 export const borrarUsuario = async (id: string): Promise<boolean> => {
     let resultado:boolean = false;
-    const usuario = await User.findByPk(id)
+    const usuario = await Usuarios.findByPk(id)
     console.log("vamos a eliminar el usuario.........")
 
     if (usuario !== null) {
