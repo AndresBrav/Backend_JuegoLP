@@ -9,7 +9,8 @@ const Juego = db.define('Juego', {
     allowNull: false,
   }
 },{
-    tableName:'juegos'
+    tableName:'juegos',
+    timestamps: false // 👈 Muy importante sin createdAt updateAt
 });
 
 Juego.hasMany(UsuarioJuegos,{
