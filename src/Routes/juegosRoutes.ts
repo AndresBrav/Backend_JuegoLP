@@ -1,6 +1,7 @@
 import express from "express";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; 
 import { consultarJuegos } from "../Controllers/juegosController";
+
 const router = express.Router()
 router.get('/consultar', verifyToken, consultarJuegos);
 
