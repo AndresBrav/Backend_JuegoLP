@@ -3,6 +3,10 @@ dotenv.config(); // ¡Esto carga el archivo .env!
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import UsuariosRoutes from '../Routes/usuariosRoutes';
+import PruebasRoutes from '../Routes/pruebasRoutes';
+import JuegosRoutes from '../Routes/juegosRoutes'
+
+
 import morgan from 'morgan';
 // actualizado
 
@@ -13,11 +17,15 @@ import db from '../db/conexion'
 class ApiServer {
   private usuariosPath: string;
   private app: Application;
+  private pruebasPath:string;
+  private juegosPath:string;
   
 
   constructor() {
     this.app = express();
     this.usuariosPath = "/usuarios";
+    this.pruebasPath = "/pruebas";
+    this.juegosPath = "/juegos";
     this.middlewares();  // Llama a la función middleware
     this.routes();       // Registra las rutas
     this.dbConnet(); //conexion a la base de datos
@@ -33,6 +41,8 @@ class ApiServer {
 
   public routes(): void {
     this.app.use(this.usuariosPath, UsuariosRoutes);
+    this.app.use(this.pruebasPath, PruebasRoutes);
+    this.app.use(this.juegosPath,JuegosRoutes)
   }
 
   public escuchar(): void {

@@ -13,6 +13,11 @@ const UsuarioJuegos = db.define('UsuarioJuegos', {
         type: DataTypes.INTEGER,
         allowNull: false,
     }
-});
+},
+{
+    tableName:'usuario_juegos',
+    timestamps:false
+}
+);
 
 export default UsuarioJuegos;
