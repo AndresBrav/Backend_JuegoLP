@@ -1,6 +1,6 @@
 import { DataTypes, Model, Sequelize } from 'sequelize';
 import db from '../db/conexion'; // Asegúrate de que esta ruta sea correcta
-
+import UsuarioJuegos from './usuario_juegosModel';
 // Define una interfaz para los atributos del modelo
 interface UsuariosAttributes {
   username?: string;
@@ -27,6 +27,19 @@ const Usuarios = db.define<UsuariosInstance>('Usuarios', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+},
+{
+  tableName:'usuarios'
+});
+
+Usuarios.hasMany(UsuarioJuegos,{
+  foreignKey:'usuario_id',
+  sourceKey:'id'
+})
+
+UsuarioJuegos.belongsTo(UsuarioJuegos, {
+  foreignKey: 'usuario_id',
+  targetKey: 'id'
 });
 
 export default Usuarios;
