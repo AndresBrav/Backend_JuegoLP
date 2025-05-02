@@ -2,13 +2,23 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Usuario_Juegos', {
+  async up (queryInterface, Sequelize) {
+    await queryInterface.createTable('Usuarios_Niveles', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
+      },
+      nivel_id: {
+        type: Sequelize.INTEGER,
+        references: {
+          model: 'Niveles',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+        allowNull: true
       },
       usuario_id: {
         type: Sequelize.INTEGER,
@@ -20,26 +30,16 @@ module.exports = {
         onDelete: 'SET NULL',
         allowNull: true
       },
-      juego_id: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Juegos',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-        allowNull: true
+      completado:{
+        type: Sequelize.BOOLEAN
+      },
+      fecha_completado:{
+        type: Sequelize.DATE
       }
     });
   },
 
-  async down(queryInterface, Sequelize) {
-    /**
-     * Add reverting commands here.
-     *
-     * Example:
-     * await queryInterface.dropTable('users');
-     */
-    await queryInterface.dropTable('Usuario_Juegos');
+  async down (queryInterface, Sequelize) {
+    await queryInterface.dropTable('Usuarios_Niveles');
   }
 };
