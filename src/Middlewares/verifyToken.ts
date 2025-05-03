@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import * as dotenv from 'dotenv';
 dotenv.config(); // ¡Esto carga el archivo .env!
+import {encrypt,decrypt} from '../utils/encriptador'
 
 // Secreto para firmar el token (puedes cambiar esto por un valor más seguro más adelante)
 const secretKey = process.env.CLAVE_JWT ?? 'no hay clave';
@@ -13,12 +14,15 @@ export interface AuthenticatedRequest extends Request {
 
 // Middleware para verificar el token
 const verifyToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    const token = req.header("Authorization");
+    const tokenA = req.header("Authorization");
 
-    if (!token) {
+    if (!tokenA) {
         res.status(403).send("Acceso denegado");
         return;
     }
+
+    const tokenDesencriptado = decrypt(tokenA);
+    const token = tokenDesencriptado
 
     try {
         // Verificar y decodificar el token
