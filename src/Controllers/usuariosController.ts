@@ -35,7 +35,7 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
     try {
         res.json({
             id: `Este es el id que se paso ${id}`,
-            username: `los datos del token son ${req.DatosToken}`,
+            username: `los datos del token son ${req.DatosToken.username}`,
             msg: usuario
         })
         // Aquí puedes agregar la lógica para consultar los detalles del usuario con el id
