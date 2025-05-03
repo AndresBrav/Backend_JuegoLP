@@ -3,9 +3,10 @@ import { consultarUsuarios, consultarDetalle, ingresar, actualizar, borrar, Regi
 import jwt from "jsonwebtoken";  // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";  // Importa verifyToken
-import  {Usuario}  from '../interfaces/Usuario';
+import { Usuario } from '../interfaces/Usuario';
 import * as dotenv from 'dotenv';
 dotenv.config(); // ¡Esto carga el archivo .env!
+import {encrypt,decrypt} from '../utils/encriptador'
 
 
 const router: Router = express.Router();
@@ -36,8 +37,11 @@ router.post("/login/iniciar", async (req: Request, res: Response) => {
     console.log(existe)
     if (existe) {
         //Crear un token con expiración
-        const secretKey = process.env.CLAVE_JWT ?? 'no hay clave';
-        const token = jwt.sign(usuario,secretKey, { expiresIn: "1h" });
+        const secretKey = process.env.CLAVE_JWT ?? 'no hay clave';     /* ?? solo undefined o null */
+        const tokenA = jwt.sign(usuario, secretKey, { expiresIn: "1h" });
+        const tokenEncriptado = encrypt(tokenA);
+        const token = tokenEncriptado
+        // res.json({ token });
         res.json({ token });
     }
     else {

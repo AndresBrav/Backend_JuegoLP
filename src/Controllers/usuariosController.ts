@@ -8,6 +8,8 @@ import Usuarios from "../Models/usuarioModel";
 //mejorado
 import * as dotenv from 'dotenv';
 dotenv.config(); // ¡Esto carga el archivo .env!
+import {encrypt,decrypt} from '../utils/encriptador'
+
 
 const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -145,7 +147,9 @@ const RegistrarLogin = async (req: Request, res: Response) => {
         if (existe) {
             //Crear un token con expiración
             const secretKey = process.env.CLAVE_JWT ?? 'no hay clave';
-            const token = jwt.sign(UsuarioArevisar, secretKey, { expiresIn: "10m" });
+            const tokenA = jwt.sign(UsuarioArevisar, secretKey, { expiresIn: "1h" });
+            const tokenEncriptado = encrypt(tokenA);
+            const token = tokenEncriptado
             res.json({ token });
         }
         else {
