@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import * as dotenv from 'dotenv';
+dotenv.config(); // ¡Esto carga el archivo .env!
 
 // Secreto para firmar el token (puedes cambiar esto por un valor más seguro más adelante)
-const secretKey = "miSecreto";
+const secretKey = process.env.CLAVE_JWT ?? 'no hay clave';
 
 // Extender `Request` para agregar `DatosToken`
 export interface AuthenticatedRequest extends Request {
