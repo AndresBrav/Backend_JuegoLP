@@ -1,20 +1,20 @@
-import { Usuario } from '../interfaces/Usuario';
+import { Usuario } from "../interfaces/Usuario";
 // import Usuarios from "../Models/usuariosModel"
 
-import { UsuarioActualizado } from '../interfaces/Usuario';
-import Usuarios,{UsuariosInstance} from '../Models/usuarioModel';
+import { UsuarioActualizado } from "../interfaces/Usuario";
+import Avatares from "../Models/avatarModel";
+import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
-import { isString, isNumero } from '../Validations/validaciones';
+import { isString, isNumero } from "../Validations/validaciones";
 
-
-
-
-export const obtenerTodosLosUsuarios = async (): Promise<UsuariosInstance[]> => {
-  const usuarios = await Usuarios.findAll();
-  if (!usuarios || usuarios.length === 0) {
-    throw new Error('No se encontraron usuarios');
-  }
-  return usuarios;
+export const obtenerTodosLosUsuarios = async (): Promise<
+    UsuariosInstance[]
+> => {
+    const usuarios = await Usuarios.findAll();
+    if (!usuarios || usuarios.length === 0) {
+        throw new Error("No se encontraron usuarios");
+    }
+    return usuarios;
 };
 
 // export const obtenerTodosLosUsuarios = async (): Promise<any> => {
@@ -25,54 +25,61 @@ export const obtenerTodosLosUsuarios = async (): Promise<UsuariosInstance[]> => 
 //     return usuarios;
 // }
 
-export const consultarDetalleUsuario = async (id: string): Promise<UsuariosInstance> => {
-
+export const consultarDetalleUsuario = async (
+    id: string
+): Promise<UsuariosInstance> => {
     // console.log("el parametro que se paso es "+isString(id))
     const tipoID = isString(id);
 
     if (tipoID) {
-        const usuario:UsuariosInstance = await Usuarios.findByPk(id)
+        const usuario: UsuariosInstance = await Usuarios.findByPk(id);
         return usuario;
+    } else {
+        throw new Error("pasa el tipo de dato correcto");
     }
-    else {
-        throw new Error("pasa el tipo de dato correcto")
-    }
-}
+};
 
-
-
-export const aniadirUsuario = async (username: any, edad: any, password: any): Promise<boolean> => {
+export const aniadirUsuario = async (
+    username: any,
+    edad: any,
+    password: any
+): Promise<boolean> => {
     if (isNumero(edad) && isString(username) && isString(password)) {
-        const usuarioA:UsuarioActualizado ={username,edad,password}
+        const usuarioA: UsuarioActualizado = { username, edad, password };
         // const usuario = {
         //     username,
         //     edad,
         //     password
         // };
-        await Usuarios.create(usuarioA)
+        await Usuarios.create(usuarioA);
         return true;
-    }
-    else {
+    } else {
         return false;
     }
-}
+};
 
-
-export const actualizarUsuario = async (username: any, edad: any, password: any, id: string): Promise<boolean> => {
+export const actualizarUsuario = async (
+    username: any,
+    edad: any,
+    password: any,
+    id: string
+): Promise<boolean> => {
     const usuario = await Usuarios.findByPk(id);
-    
+
     if (!usuario) {
         throw new Error("Usuario no encontrado");
     }
 
     // Verificar si los tres parámetros son undefined
-    if (username === undefined && edad === undefined && password === undefined) {
+    if (
+        username === undefined &&
+        edad === undefined &&
+        password === undefined
+    ) {
         throw new Error("No se proporcionaron campos para actualizar");
     }
 
     const usuarioActualizado: UsuarioActualizado = {};
-
-
 
     // Verificar si no es undefined antes de agregar al objeto
     if (username !== undefined && isString(username)) {
@@ -90,17 +97,35 @@ export const actualizarUsuario = async (username: any, edad: any, password: any,
     // Actualizamos el usuario con los campos que no son undefined
     await usuario.update(usuarioActualizado);
     return true;
-}
+};
 
 export const borrarUsuario = async (id: string): Promise<boolean> => {
-    let resultado:boolean = false;
-    const usuario = await Usuarios.findByPk(id)
-    console.log("vamos a eliminar el usuario.........")
+    let resultado: boolean = false;
+    const usuario = await Usuarios.findByPk(id);
+    console.log("vamos a eliminar el usuario.........");
 
     if (usuario !== null) {
-        console.log(usuario)
+        console.log(usuario);
         await usuario.destroy();
-        resultado=true;
+        resultado = true;
     }
     return resultado;
-}
+};
+
+export const obtenerUnUsuarioServicio = async (
+    nombre: string,
+    password: string
+): Promise<UsuariosInstance> => {
+    const usuario = await Usuarios.findOne({
+        where: {
+            username: nombre,
+            password: password,
+        },
+    });
+    return usuario;
+};
+
+export const retornarIDAvatar = async (idAva: number): Promise<string> => {
+    const idAvatar = await Avatares.findByPk(idAva);
+    return idAvatar.url;
+};

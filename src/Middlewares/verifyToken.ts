@@ -27,6 +27,7 @@ const verifyToken = (req: AuthenticatedRequest, res: Response, next: NextFunctio
     try {
         // Verificar y decodificar el token
         const decoded = jwt.verify(token, secretKey) as JwtPayload;
+        console.log(decoded)
         req.DatosToken = decoded;
         next();
     } catch (err) {
