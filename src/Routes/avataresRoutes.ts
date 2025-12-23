@@ -1,13 +1,10 @@
 import express, { Request, Response, Router } from 'express';
-import Avatares from "../Models/avatarModel";
+import { obtenerAvataresController, obtenerUno } from '../Controllers/avatarController';
 
 const router = express.Router()
 
-router.get('/getAvatares', async (req:Request, res:Response) => {
+router.get('/getAvatares', obtenerAvataresController);
 
-    const avatares =  await Avatares.findAll();
-    res.json(avatares)
-
-});
+router.get('/getOneAvatar/:id',obtenerUno)
 
 export default router;
