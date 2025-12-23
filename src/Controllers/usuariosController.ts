@@ -136,7 +136,7 @@ const RegistrarLogin = async (req: Request, res: Response) => {
     // const usuario:Usuario = { username, password };
     if (typeof username === 'string' && typeof password === 'string') {
         console.log("los datos son de tipo string")
-        const usuario = { username, edad, password }
+        const usuario = { username, edad, password, idAvatar: 1 }
         await Usuarios.create(usuario)  //lo crea en la base de datos
 
         const UsuarioA = { username, password }

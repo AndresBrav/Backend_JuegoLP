@@ -8,6 +8,7 @@ module.exports = {
         username: 'andres',
         edad: 25,
         password: '123456',
+        idAvatar:1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -15,6 +16,7 @@ module.exports = {
         username: 'maria',
         edad: 30,
         password: 'abcdef',
+        idAvatar:1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -22,6 +24,7 @@ module.exports = {
         username: 'juan',
         edad: 28,
         password: 'qwerty',
+        idAvatar:1,
         createdAt: new Date(),
         updatedAt: new Date()
       }
