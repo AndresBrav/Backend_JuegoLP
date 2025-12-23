@@ -5,7 +5,7 @@ import cors from 'cors';
 import UsuariosRoutes from '../Routes/usuariosRoutes';
 import PruebasRoutes from '../Routes/pruebasRoutes';
 import JuegosRoutes from '../Routes/juegosRoutes'
-
+import avataresRoutes from '../Routes/avataresRoutes';
 
 import morgan from 'morgan';
 // actualizado
@@ -19,6 +19,7 @@ class ApiServer {
   private app: Application;
   private pruebasPath:string;
   private juegosPath:string;
+  private avataresPath:string;
   
 
   constructor() {
@@ -26,6 +27,7 @@ class ApiServer {
     this.usuariosPath = "/usuarios";
     this.pruebasPath = "/pruebas";
     this.juegosPath = "/juegos";
+    this.avataresPath = "/avatares";
     this.middlewares();  // Llama a la función middleware
     this.routes();       // Registra las rutas
     this.dbConnet(); //conexion a la base de datos
@@ -43,6 +45,7 @@ class ApiServer {
     this.app.use(this.usuariosPath, UsuariosRoutes);
     this.app.use(this.pruebasPath, PruebasRoutes);
     this.app.use(this.juegosPath,JuegosRoutes)
+    this.app.use(this.avataresPath,avataresRoutes)
   }
 
   public escuchar(): void {

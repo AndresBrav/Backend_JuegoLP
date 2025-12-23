@@ -20,7 +20,7 @@ router.route("/detalles/:id")
     .put(verifyToken, actualizar)        // Aplica verifyToken al método PUT
     .delete(verifyToken, borrar);
 
-router.post("/login/registrar", RegistrarLogin);
+router.post("/login/registrar", RegistrarLogin);      //Ruta para registrar un nuevo usuario e inicia sesion
 
 //Ruta para obtener un token
 router.post("/login/iniciar", async (req: Request, res: Response) => {
