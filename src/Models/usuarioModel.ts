@@ -36,7 +36,7 @@ const Usuarios = db.define<UsuariosInstance>(
         },
     },
     {
-        tableName: "usuarios",
+        tableName: "Usuarios",
     }
 );
 

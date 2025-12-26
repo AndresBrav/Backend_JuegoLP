@@ -4,7 +4,7 @@
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.bulkInsert(
-            "Avatares",
+            "avatares",
             [
                 {
                     url: "https://i.imgur.com/TxdbgOq.jpeg",
@@ -47,6 +47,6 @@ module.exports = {
          *
          * Example:
          */
-        await queryInterface.bulkDelete("Avatares", null, {});
+        await queryInterface.bulkDelete("avatares", null, {});
     },
 };
