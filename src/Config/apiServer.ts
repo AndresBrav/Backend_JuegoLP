@@ -12,7 +12,7 @@ import morgan from 'morgan';
 
 import db from '../db/conexion'
 
-
+// aqui es la base de datos y rutas
 
 class ApiServer {
   private usuariosPath: string;
