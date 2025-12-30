@@ -8,6 +8,7 @@ import {
     RegistrarLogin,
     verificarLogin,
     traerDatosUnUsuario,
+    traerPuntuacion,
 } from "../Controllers/usuariosController"; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
@@ -61,6 +62,8 @@ router.post("/login/iniciar", async (req: Request, res: Response) => {
 
 // Ruta protegida que requiere token
 router.get("/traerDatosUsuario", verifyToken, traerDatosUnUsuario);
+
+router.get("/traerpuntuacion", verifyToken, traerPuntuacion);
 
 // Ruta para obtener datos del usuario desde el token
 router.get(

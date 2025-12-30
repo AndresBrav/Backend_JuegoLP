@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; // Importa verifyToken
 import { Usuario } from "../interfaces/Usuario";
+
 import {
     obtenerTodosLosUsuarios,
     consultarDetalleUsuario,
@@ -10,13 +11,15 @@ import {
     actualizarUsuario,
     borrarUsuario,
     obtenerUnUsuarioServicio,
-    retornarIDAvatar
+    retornarIDAvatar,
 } from "../Services/usuarioServices";
 import Usuarios from "../Models/usuarioModel";
+
 //mejorado
 import * as dotenv from "dotenv";
 dotenv.config(); // ¡Esto carga el archivo .env!
 import { encrypt, decrypt } from "../utils/encriptador";
+import UsuarioJuegos from "../Models/usuario_juegosModel";
 
 const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -212,8 +215,35 @@ const traerDatosUnUsuario = async (
     res.json({
         nombre: resultado.username,
         edad: resultado.edad,
-        idAvatar: idAvatar2
+        idAvatar: idAvatar2,
     });
+};
+
+const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
+    const nombre: string = req.DatosToken?.username;
+    const password: string = req.DatosToken?.password;
+    const resultado = await obtenerUnUsuarioServicio(nombre, password);
+    console.log("desde aqui es el usuario");
+    const idUser = resultado.id;
+
+    const puntosRaw = await UsuarioJuegos.findAll({
+        attributes: ["puntos"],
+        where: { usuario_id: idUser },
+        raw: true,
+    });
+
+    // Convertimos a unknown primero, luego a la forma correcta
+    const puntos = puntosRaw as unknown as { puntos: number }[];
+
+    const totalPuntos = puntos.reduce((acc, x) => acc + x.puntos, 0);
+
+    console.log(totalPuntos); // 1
+
+    console.log(puntos);
+    // console.log(resultado.id)
+    // console.log(resultado.username)
+    // console.log(resultado.password)
+    res.end();
 };
 
 // Exportar las funciones para usarlas en las rutas
@@ -226,4 +256,5 @@ export {
     RegistrarLogin,
     verificarLogin,
     traerDatosUnUsuario,
+    traerPuntuacion,
 };

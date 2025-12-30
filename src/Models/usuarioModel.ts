@@ -3,6 +3,7 @@ import db from "../db/conexion"; // Asegúrate de que esta ruta sea correcta
 import UsuarioJuegos from "./usuario_juegosModel";
 // Define una interfaz para los atributos del modelo
 interface UsuariosAttributes {
+    id?: number;
     username?: string;
     edad?: number;
     password?: string;
@@ -18,6 +19,11 @@ export interface UsuariosInstance
 const Usuarios = db.define<UsuariosInstance>(
     "Usuarios",
     {
+        id:{
+            type: DataTypes.INTEGER,
+            autoIncrement: true,
+            primaryKey: true,
+        },
         username: {
             type: DataTypes.STRING,
             allowNull: false,
