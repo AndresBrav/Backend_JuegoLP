@@ -15,7 +15,7 @@ export interface AuthenticatedRequest extends Request {
 // Middleware para verificar el token
 const verifyToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const tokenA = req.header("Authorization");
-
+    // console.log("make it the verify")
     if (!tokenA) {
         res.status(403).send("Acceso denegado");
         return;

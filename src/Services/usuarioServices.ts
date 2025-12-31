@@ -146,3 +146,16 @@ export const obtenerPuntuacionUsuario = async (
     const totalPuntos = puntos.reduce((acc, x) => acc + x.puntos, 0);
     return totalPuntos;
 };
+
+export const IncrementarPuntosUsuario = async (
+    idjuego: string,
+    idUser: number
+): Promise<void> => {
+
+    const juego = await UsuarioJuegos.findAll({
+        where: { juego_id: Number(idjuego) },
+        // raw: true
+    });
+    console.log("we are going to print the value")
+    console.log(juego);
+};

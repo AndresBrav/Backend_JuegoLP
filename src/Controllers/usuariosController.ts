@@ -12,7 +12,8 @@ import {
     borrarUsuario,
     obtenerUnUsuarioServicio,
     retornarIDAvatar,
-    obtenerPuntuacionUsuario
+    obtenerPuntuacionUsuario,
+    IncrementarPuntosUsuario,
 } from "../Services/usuarioServices";
 import Usuarios from "../Models/usuarioModel";
 
@@ -227,12 +228,44 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     // console.log("desde aqui es el usuario");
     const idUser = resultado.id;
 
-    const puntuacion = await obtenerPuntuacionUsuario(idUser) //obtener los puntos del usuario
+    const puntuacion = await obtenerPuntuacionUsuario(idUser); //obtener los puntos del usuario
 
     // console.log(totalPuntos); // 1
 
     // console.log(puntos);
     res.json({ puntuacionTotal: puntuacion });
+};
+
+const aumentarPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
+    const { idjuego } = req.params;
+    // console.log("id juego es ", idjuego);
+
+    const nombre: string = req.DatosToken?.username;
+    const password: string = req.DatosToken?.password;
+    const usuario = await obtenerUnUsuarioServicio(nombre, password);
+    const idUser = usuario.id;
+    // console.log("the user id  is ",idUser)
+
+    // await IncrementarPuntosUsuario(idjuego,idUser);
+    const juego = await UsuarioJuegos.findOne({
+        where: { juego_id: Number(idjuego), usuario_id: Number(idUser) },
+        // raw: true
+    });
+    console.log("we are going to print the value");
+    console.log(juego.puntos)
+    console.log(juego.completado)
+    if (!juego.completado) {
+        juego.completado = true;
+        juego.puntos = juego.puntos + 10;
+        await juego.save();
+    }
+    else{
+        juego.puntos = juego.puntos + 5;
+        await juego.save();
+    }
+
+    console.log(juego);
+    res.send(juego);
 };
 
 // Exportar las funciones para usarlas en las rutas
@@ -246,4 +279,5 @@ export {
     verificarLogin,
     traerDatosUnUsuario,
     traerPuntuacion,
+    aumentarPuntuacion,
 };

@@ -9,6 +9,7 @@ import {
     verificarLogin,
     traerDatosUnUsuario,
     traerPuntuacion,
+    aumentarPuntuacion,
 } from "../Controllers/usuariosController"; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
@@ -65,22 +66,6 @@ router.get("/traerDatosUsuario", verifyToken, traerDatosUnUsuario);
 
 router.get("/traerpuntuacion", verifyToken, traerPuntuacion);
 
-// Ruta para obtener datos del usuario desde el token
-router.get(
-    "/hola/usuario",
-    verifyToken,
-    (req: AuthenticatedRequest, res: Response): void => {
-        const { username, password } = req.DatosToken || {};
-
-        if (!password || !username) {
-            res.status(400).json({ message: "Token inválido" });
-            return;
-        }
-
-        res.send(
-            `El id del usuario es: ${password}, El username es: ${username}`
-        );
-    }
-);
+router.put("/incrpuntos/:idjuego",verifyToken,aumentarPuntuacion);
 
 export default router;
