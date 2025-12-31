@@ -12,6 +12,7 @@ import {
     borrarUsuario,
     obtenerUnUsuarioServicio,
     retornarIDAvatar,
+    obtenerPuntuacionUsuario
 } from "../Services/usuarioServices";
 import Usuarios from "../Models/usuarioModel";
 
@@ -223,27 +224,15 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     const nombre: string = req.DatosToken?.username;
     const password: string = req.DatosToken?.password;
     const resultado = await obtenerUnUsuarioServicio(nombre, password);
-    console.log("desde aqui es el usuario");
+    // console.log("desde aqui es el usuario");
     const idUser = resultado.id;
 
-    const puntosRaw = await UsuarioJuegos.findAll({
-        attributes: ["puntos"],
-        where: { usuario_id: idUser },
-        raw: true,
-    });
+    const puntuacion = await obtenerPuntuacionUsuario(idUser) //obtener los puntos del usuario
 
-    // Convertimos a unknown primero, luego a la forma correcta
-    const puntos = puntosRaw as unknown as { puntos: number }[];
+    // console.log(totalPuntos); // 1
 
-    const totalPuntos = puntos.reduce((acc, x) => acc + x.puntos, 0);
-
-    console.log(totalPuntos); // 1
-
-    console.log(puntos);
-    // console.log(resultado.id)
-    // console.log(resultado.username)
-    // console.log(resultado.password)
-    res.end();
+    // console.log(puntos);
+    res.json({ puntuacionTotal: puntuacion });
 };
 
 // Exportar las funciones para usarlas en las rutas
