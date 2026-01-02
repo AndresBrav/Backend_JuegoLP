@@ -14,8 +14,9 @@ import {
     retornarIDAvatar,
     obtenerPuntuacionUsuario,
     IncrementarPuntosUsuario,
+    servicioActualizarFoto
 } from "../Services/usuarioServices";
-import Usuarios from "../Models/usuarioModel";
+import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
 //mejorado
 import * as dotenv from "dotenv";
@@ -252,20 +253,42 @@ const aumentarPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
         // raw: true
     });
     console.log("we are going to print the value");
-    console.log(juego.puntos)
-    console.log(juego.completado)
+    console.log(juego.puntos);
+    console.log(juego.completado);
     if (!juego.completado) {
         juego.completado = true;
         juego.puntos = juego.puntos + 10;
         await juego.save();
-    }
-    else{
+    } else {
         juego.puntos = juego.puntos + 5;
         await juego.save();
     }
 
     console.log(juego);
     res.send(juego);
+};
+
+const actualizarPefilFoto = async (
+    req: AuthenticatedRequest,
+    res: Response
+) => {
+    const { idFoto } = req.params;
+
+    const nombre: string = req.DatosToken?.username;
+    const password: string = req.DatosToken?.password;
+
+    // await actualizarPefilFotoServicio(nombre, password, idFoto);
+
+    // const usuario = await obtenerUnUsuarioServicio(nombre, password);
+
+    // usuario.idAvatar = Number(idFoto);
+    // usuario.save();
+
+    const usuario: UsuariosInstance = await servicioActualizarFoto(nombre, password, idFoto);
+    res.json({
+        msg: "se actualizo la foto de perfil correctamente",
+        user: usuario,
+    });
 };
 
 // Exportar las funciones para usarlas en las rutas
@@ -280,4 +303,5 @@ export {
     traerDatosUnUsuario,
     traerPuntuacion,
     aumentarPuntuacion,
+    actualizarPefilFoto
 };

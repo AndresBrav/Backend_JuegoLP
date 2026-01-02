@@ -151,11 +151,25 @@ export const IncrementarPuntosUsuario = async (
     idjuego: string,
     idUser: number
 ): Promise<void> => {
-
     const juego = await UsuarioJuegos.findAll({
         where: { juego_id: Number(idjuego) },
         // raw: true
     });
-    console.log("we are going to print the value")
+    console.log("we are going to print the value");
     console.log(juego);
+};
+
+export const servicioActualizarFoto = async (
+    nombre: string,
+    password: string,
+    idFoto: string
+): Promise<UsuariosInstance> => {
+    try {
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        usuario.idAvatar = Number(idFoto);
+        usuario.save();
+        return usuario;
+    } catch (error) {
+        throw error;
+    }
 };

@@ -10,6 +10,7 @@ import {
     traerDatosUnUsuario,
     traerPuntuacion,
     aumentarPuntuacion,
+    actualizarPefilFoto
 } from "../Controllers/usuariosController"; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
 import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
@@ -67,5 +68,7 @@ router.get("/traerDatosUsuario", verifyToken, traerDatosUnUsuario);
 router.get("/traerpuntuacion", verifyToken, traerPuntuacion);
 
 router.put("/incrpuntos/:idjuego",verifyToken,aumentarPuntuacion);
+
+router.put("/actualizarPefilFoto/:idFoto",verifyToken,actualizarPefilFoto);
 
 export default router;
