@@ -14,7 +14,7 @@ import {
     retornarIDAvatar,
     obtenerPuntuacionUsuario,
     IncrementarPuntosUsuario,
-    servicioActualizarFoto
+    servicioActualizarFoto,
 } from "../Services/usuarioServices";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
@@ -238,34 +238,51 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 const aumentarPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
-    const { idjuego } = req.params;
-    // console.log("id juego es ", idjuego);
+    try {
+        const { idjuego } = req.params;
 
-    const nombre: string = req.DatosToken?.username;
-    const password: string = req.DatosToken?.password;
-    const usuario = await obtenerUnUsuarioServicio(nombre, password);
-    const idUser = usuario.id;
-    // console.log("the user id  is ",idUser)
+        const nombre: string = req.DatosToken?.username!;
+        const password: string = req.DatosToken?.password!;
 
-    // await IncrementarPuntosUsuario(idjuego,idUser);
-    const juego = await UsuarioJuegos.findOne({
-        where: { juego_id: Number(idjuego), usuario_id: Number(idUser) },
-        // raw: true
-    });
-    console.log("we are going to print the value");
-    console.log(juego.puntos);
-    console.log(juego.completado);
-    if (!juego.completado) {
-        juego.completado = true;
-        juego.puntos = juego.puntos + 10;
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const idUser = usuario.id;
+
+        let juego = await UsuarioJuegos.findOne({
+            where: {
+                juego_id: Number(idjuego),
+                usuario_id: Number(idUser),
+            },
+        });
+
+        // 🔴 SI NO EXISTE → CREAR REGISTRO
+        if (!juego) {
+            juego = await UsuarioJuegos.create({
+                usuario_id: idUser,
+                juego_id: Number(idjuego),
+                completado: true,
+                puntos: 10, // primera vez
+            });
+
+            return res.status(201).json(juego);
+        }
+
+        // ✅ SI YA EXISTE
+        if (!juego.completado) {
+            juego.completado = true;
+            juego.puntos += 10;
+        } else {
+            juego.puntos += 5;
+        }
+
         await juego.save();
-    } else {
-        juego.puntos = juego.puntos + 5;
-        await juego.save();
+        return res.json(juego);
+    } catch (error: any) {
+        console.error("ERROR aumentarPuntuacion:", error);
+        return res.status(500).json({
+            message: "Error interno",
+            error: error.message,
+        });
     }
-
-    console.log(juego);
-    res.send(juego);
 };
 
 const actualizarPefilFoto = async (
@@ -284,7 +301,11 @@ const actualizarPefilFoto = async (
     // usuario.idAvatar = Number(idFoto);
     // usuario.save();
 
-    const usuario: UsuariosInstance = await servicioActualizarFoto(nombre, password, idFoto);
+    const usuario: UsuariosInstance = await servicioActualizarFoto(
+        nombre,
+        password,
+        idFoto
+    );
     res.json({
         msg: "se actualizo la foto de perfil correctamente",
         user: usuario,
@@ -303,5 +324,5 @@ export {
     traerDatosUnUsuario,
     traerPuntuacion,
     aumentarPuntuacion,
-    actualizarPefilFoto
+    actualizarPefilFoto,
 };
