@@ -237,12 +237,15 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     res.json({ puntuacionTotal: puntuacion });
 };
 
-const aumentarPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
+const aumentarPuntuacion = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
     try {
         const { idjuego } = req.params;
 
-        const nombre: string = req.DatosToken?.username!;
-        const password: string = req.DatosToken?.password!;
+        const nombre = req.DatosToken?.username!;
+        const password = req.DatosToken?.password!;
 
         const usuario = await obtenerUnUsuarioServicio(nombre, password);
         const idUser = usuario.id;
@@ -254,19 +257,18 @@ const aumentarPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
             },
         });
 
-        // 🔴 SI NO EXISTE → CREAR REGISTRO
         if (!juego) {
             juego = await UsuarioJuegos.create({
                 usuario_id: idUser,
                 juego_id: Number(idjuego),
                 completado: true,
-                puntos: 10, // primera vez
+                puntos: 10,
             });
 
-            return res.status(201).json(juego);
+            res.status(201).json(juego);
+            return;
         }
 
-        // ✅ SI YA EXISTE
         if (!juego.completado) {
             juego.completado = true;
             juego.puntos += 10;
@@ -275,10 +277,10 @@ const aumentarPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
         }
 
         await juego.save();
-        return res.json(juego);
+        res.json(juego);
     } catch (error: any) {
         console.error("ERROR aumentarPuntuacion:", error);
-        return res.status(500).json({
+        res.status(500).json({
             message: "Error interno",
             error: error.message,
         });
