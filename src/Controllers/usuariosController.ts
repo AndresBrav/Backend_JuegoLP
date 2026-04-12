@@ -65,7 +65,7 @@ const ingresar = async (req: Request, res: Response) => {
         const datosCorrectos: boolean = await aniadirUsuario(
             username,
             edad,
-            password
+            password,
         );
 
         // console.log("vamos a verificar")
@@ -97,7 +97,7 @@ const actualizar = async (req: Request, res: Response) => {
             username,
             edad,
             password,
-            id
+            id,
         );
 
         if (datosCorrectos) {
@@ -206,7 +206,7 @@ const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
 
 const traerDatosUnUsuario = async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
 ) => {
     const nombre: string = req.DatosToken?.username;
     const password: string = req.DatosToken?.password;
@@ -239,7 +239,7 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
 
 const aumentarPuntuacion = async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
 ): Promise<void> => {
     try {
         const { idjuego } = req.params;
@@ -289,7 +289,7 @@ const aumentarPuntuacion = async (
 
 const actualizarPefilFoto = async (
     req: AuthenticatedRequest,
-    res: Response
+    res: Response,
 ) => {
     const { idFoto } = req.params;
 
@@ -306,7 +306,7 @@ const actualizarPefilFoto = async (
     const usuario: UsuariosInstance = await servicioActualizarFoto(
         nombre,
         password,
-        idFoto
+        idFoto,
     );
     res.json({
         msg: "se actualizo la foto de perfil correctamente",

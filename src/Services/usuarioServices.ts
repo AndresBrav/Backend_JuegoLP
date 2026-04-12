@@ -27,7 +27,7 @@ export const obtenerTodosLosUsuarios = async (): Promise<
 // }
 
 export const consultarDetalleUsuario = async (
-    id: string
+    id: string,
 ): Promise<UsuariosInstance> => {
     // console.log("el parametro que se paso es "+isString(id))
     const tipoID = isString(id);
@@ -43,7 +43,7 @@ export const consultarDetalleUsuario = async (
 export const aniadirUsuario = async (
     username: any,
     edad: any,
-    password: any
+    password: any,
 ): Promise<boolean> => {
     if (isNumero(edad) && isString(username) && isString(password)) {
         const usuarioA: UsuarioActualizado = { username, edad, password };
@@ -63,7 +63,7 @@ export const actualizarUsuario = async (
     username: any,
     edad: any,
     password: any,
-    id: string
+    id: string,
 ): Promise<boolean> => {
     const usuario = await Usuarios.findByPk(id);
 
@@ -115,7 +115,7 @@ export const borrarUsuario = async (id: string): Promise<boolean> => {
 
 export const obtenerUnUsuarioServicio = async (
     nombre: string,
-    password: string
+    password: string,
 ): Promise<UsuariosInstance> => {
     const usuario = await Usuarios.findOne({
         where: {
@@ -132,7 +132,7 @@ export const retornarIDAvatar = async (idAva: number): Promise<string> => {
 };
 
 export const obtenerPuntuacionUsuario = async (
-    idUser: number
+    idUser: number,
 ): Promise<number> => {
     const puntosRaw = await UsuarioJuegos.findAll({
         attributes: ["puntos"],
@@ -149,7 +149,7 @@ export const obtenerPuntuacionUsuario = async (
 
 export const IncrementarPuntosUsuario = async (
     idjuego: string,
-    idUser: number
+    idUser: number,
 ): Promise<void> => {
     const juego = await UsuarioJuegos.findAll({
         where: { juego_id: Number(idjuego) },
@@ -162,7 +162,7 @@ export const IncrementarPuntosUsuario = async (
 export const servicioActualizarFoto = async (
     nombre: string,
     password: string,
-    idFoto: string
+    idFoto: string,
 ): Promise<UsuariosInstance> => {
     try {
         const usuario = await obtenerUnUsuarioServicio(nombre, password);
