@@ -1,6 +1,7 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 import db from "../db/conexion"; // Asegúrate de que esta ruta sea correcta
 import UsuarioJuegos from "./usuario_juegosModel";
+import Notificaciones from "./NotificacionesModel"; //importamos las notificaciones
 // Define una interfaz para los atributos del modelo
 interface UsuariosAttributes {
     id?: number;
@@ -12,14 +13,15 @@ interface UsuariosAttributes {
 
 // Define una interfaz para la instancia del modelo
 export interface UsuariosInstance
-    extends Model<UsuariosAttributes>, // incluye métodos como .save(), .destroy(), etc. // Métodos de Sequelize con tipos
+    extends
+        Model<UsuariosAttributes>, // incluye métodos como .save(), .destroy(), etc. // Métodos de Sequelize con tipos
         UsuariosAttributes {} // permite acceder directamente a username, edad, password
 
 // Define el modelo con los tipos específicos
 const Usuarios = db.define<UsuariosInstance>(
     "Usuarios",
     {
-        id:{
+        id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
             primaryKey: true,
@@ -43,7 +45,7 @@ const Usuarios = db.define<UsuariosInstance>(
     },
     {
         tableName: "Usuarios",
-    }
+    },
 );
 
 Usuarios.hasMany(UsuarioJuegos, {
@@ -51,7 +53,17 @@ Usuarios.hasMany(UsuarioJuegos, {
     sourceKey: "id",
 });
 
-UsuarioJuegos.belongsTo(UsuarioJuegos, {
+UsuarioJuegos.belongsTo(Usuarios, {
+    foreignKey: "usuario_id",
+    targetKey: "id",
+});
+
+Usuarios.hasMany(Notificaciones, {
+    foreignKey: "usuario_id",
+    sourceKey: "id",
+});
+
+Notificaciones.belongsTo(Usuarios, {
     foreignKey: "usuario_id",
     targetKey: "id",
 });
