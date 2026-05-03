@@ -9,11 +9,10 @@ import avataresRoutes from "../Routes/avataresRoutes";
 
 import morgan from "morgan";
 // actualizado
-
 import db from "../db/conexion";
+import { iniciarCronJobs, RecordarDiario } from "../cron/notificaciones"; //automatizaciones de cron
 
 // aqui es la base de datos y rutas
-
 class ApiServer {
     private usuariosPath: string;
     private app: Application;
@@ -66,6 +65,8 @@ class ApiServer {
         try {
             await db.authenticate();
             console.log("base de datos conectada");
+            iniciarCronJobs(); //ejecutar cron cuando ya se conecta a la base de datos
+            await RecordarDiario();
         } catch (error) {
             console.log(error);
             console.log("error al conectarse en la base de datos");
