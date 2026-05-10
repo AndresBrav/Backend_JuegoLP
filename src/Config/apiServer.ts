@@ -6,11 +6,12 @@ import UsuariosRoutes from "../Routes/usuariosRoutes";
 import PruebasRoutes from "../Routes/pruebasRoutes";
 import JuegosRoutes from "../Routes/juegosRoutes";
 import avataresRoutes from "../Routes/avataresRoutes";
+import notificacionRouter from "../Routes/notificacionesRoutes";
 
 import morgan from "morgan";
 // actualizado
 import db from "../db/conexion";
-import { iniciarCronJobs, RecordarDiario } from "../cron/notificaciones"; //automatizaciones de cron
+import { iniciarCronJobs } from "../cron/notificaciones"; //automatizaciones de cron
 
 // aqui es la base de datos y rutas
 class ApiServer {
@@ -19,6 +20,7 @@ class ApiServer {
     private pruebasPath: string;
     private juegosPath: string;
     private avataresPath: string;
+    private notificationPath: string;
 
     constructor() {
         this.app = express();
@@ -26,6 +28,7 @@ class ApiServer {
         this.pruebasPath = "/pruebas";
         this.juegosPath = "/juegos";
         this.avataresPath = "/avatares";
+        this.notificationPath = "/notificaciones";
         this.middlewares(); // Llama a la función middleware
         this.routes(); // Registra las rutas
         this.dbConnet(); //conexion a la base de datos
@@ -50,6 +53,7 @@ class ApiServer {
         this.app.use(this.pruebasPath, PruebasRoutes);
         this.app.use(this.juegosPath, JuegosRoutes);
         this.app.use(this.avataresPath, avataresRoutes);
+        this.app.use(this.notificationPath, notificacionRouter);
     }
 
     public escuchar(): void {
@@ -65,8 +69,7 @@ class ApiServer {
         try {
             await db.authenticate();
             console.log("base de datos conectada");
-            iniciarCronJobs(); //ejecutar cron cuando ya se conecta a la base de datos
-            await RecordarDiario();
+            await iniciarCronJobs(); //ejecutar cron cuando ya se conecta a la base de datos
         } catch (error) {
             console.log(error);
             console.log("error al conectarse en la base de datos");

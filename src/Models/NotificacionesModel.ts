@@ -41,6 +41,7 @@ const Notificaciones = db.define<NotificacionesInstance>(
     },
     {
         tableName: "notificaciones",
+        timestamps: false, // 👈 desactivar el createdAt updatedAt
     },
 );
 
