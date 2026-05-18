@@ -163,7 +163,7 @@ const RegistrarLogin = async (req: Request, res: Response) => {
             //Crear un token con expiración
             const secretKey = process.env.CLAVE_JWT ?? "no hay clave";
             const tokenA = jwt.sign(UsuarioArevisar, secretKey, {
-                expiresIn: "1h",
+                expiresIn: "30d",
             });
             const tokenEncriptado = encrypt(tokenA);
             const token = tokenEncriptado;

@@ -52,7 +52,7 @@ router.post("/login/iniciar", async (req: Request, res: Response) => {
         const secretKey =
             process.env.CLAVE_JWT ??
             "no hay clave"; /* ?? solo undefined o null */
-        const tokenA = jwt.sign(usuario, secretKey, { expiresIn: "1h" });
+        const tokenA = jwt.sign(usuario, secretKey, { expiresIn: "30d" });
         const tokenEncriptado = encrypt(tokenA);
         const token = tokenEncriptado;
         // res.json({ token });
