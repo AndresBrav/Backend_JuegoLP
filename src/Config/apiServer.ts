@@ -21,6 +21,7 @@ class ApiServer {
     private juegosPath: string;
     private avataresPath: string;
     private notificationPath: string;
+    private juegosIAPath: string;
 
     constructor() {
         this.app = express();
@@ -29,6 +30,7 @@ class ApiServer {
         this.juegosPath = "/juegos";
         this.avataresPath = "/avatares";
         this.notificationPath = "/notificaciones";
+        this.juegosIAPath = "/juegosIA";
         this.middlewares(); // Llama a la función middleware
         this.routes(); // Registra las rutas
         this.dbConnet(); //conexion a la base de datos
@@ -54,6 +56,7 @@ class ApiServer {
         this.app.use(this.juegosPath, JuegosRoutes);
         this.app.use(this.avataresPath, avataresRoutes);
         this.app.use(this.notificationPath, notificacionRouter);
+        this.app.use(this.juegosIAPath, JuegosRoutes);
     }
 
     public escuchar(): void {

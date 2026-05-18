@@ -1,16 +1,12 @@
 import express from "express";
-import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; 
+import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";
 import { consultarJuegos } from "../Controllers/juegosController";
+import { traerJuegosController } from "../Controllers/juegosIAController";
 
-const router = express.Router()
-router.get('/consultar', verifyToken, consultarJuegos);
+const router = express.Router();
+router.get("/consultar", verifyToken, consultarJuegos);
 
-/* router.post('/ingresar', verifyToken, ingresarJuegos);
+// trae los juegos con IA que se guardo
+router.get("/traerJuegosConIA", verifyToken, traerJuegosController);
 
-router.route("/detalles/:id")
-    .get(verifyToken, consultarDetalle)  // Aplica verifyToken al método GET
-    .put(verifyToken, actualizar)        // Aplica verifyToken al método PUT
-    .delete(verifyToken, borrar); */
-
-
-export default router 
+export default router;

@@ -2,6 +2,7 @@ import { DataTypes, Model, Sequelize } from "sequelize";
 import db from "../db/conexion"; // Asegúrate de que esta ruta sea correcta
 import UsuarioJuegos from "./usuario_juegosModel";
 import Notificaciones from "./NotificacionesModel"; //importamos las notificaciones
+import JuegosIA from "./juegos_iaModel";
 // Define una interfaz para los atributos del modelo
 interface UsuariosAttributes {
     id?: number;
@@ -64,6 +65,16 @@ Usuarios.hasMany(Notificaciones, {
 });
 
 Notificaciones.belongsTo(Usuarios, {
+    foreignKey: "usuario_id",
+    targetKey: "id",
+});
+
+Usuarios.hasMany(JuegosIA, {
+    foreignKey: "usuario_id",
+    sourceKey: "id",
+});
+
+JuegosIA.belongsTo(Usuarios, {
     foreignKey: "usuario_id",
     targetKey: "id",
 });
