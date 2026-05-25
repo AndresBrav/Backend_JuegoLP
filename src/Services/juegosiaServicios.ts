@@ -9,3 +9,20 @@ export const obtenerTodosLosJuegosIA = async (
     }
     return juegos;
 };
+
+export const guardarJuegoIA = async (
+    usuario_id: number,
+    descripcion: string,
+    tipo_juego: string,
+    completado?: boolean,
+    puntos?: number,
+): Promise<JuegosIAInstance> => {
+    const juegoIA = await JuegosIA.create({
+        usuario_id,
+        descripcion,
+        tipo_juego,
+        completado: completado || false,
+        puntos: puntos || 0,
+    });
+    return juegoIA;
+};
