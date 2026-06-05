@@ -5,6 +5,7 @@ import {
     traerJuegosController,
     guardarJuegoIAController,
 } from "../Controllers/juegosIAController";
+import { completarJuegoController } from "../Controllers/juegosIAController";
 
 const router = express.Router();
 router.get("/consultar", verifyToken, consultarJuegos);
@@ -14,5 +15,8 @@ router.get("/traerJuegosConIA", verifyToken, traerJuegosController);
 
 // guarda un nuevo juego con IA
 router.post("/guardarjuegoIA", verifyToken, guardarJuegoIAController);
+
+// marcar juego como completado e incrementar puntos
+router.put("/completar/:id", verifyToken, completarJuegoController);
 
 export default router;

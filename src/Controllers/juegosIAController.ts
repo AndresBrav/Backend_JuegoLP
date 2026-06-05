@@ -5,6 +5,7 @@ import {
     obtenerTodosLosJuegosIA,
     guardarJuegoIA,
 } from "../Services/juegosiaServicios";
+import { completarJuegoIA } from "../Services/juegosiaServicios";
 
 const traerJuegosController = async (
     req: AuthenticatedRequest,
@@ -68,4 +69,37 @@ const guardarJuegoIAController = async (
     }
 };
 
-export { traerJuegosController, guardarJuegoIAController };
+const completarJuegoController = async (
+    req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const nombre: string = req.DatosToken?.username;
+        const password: string = req.DatosToken?.password;
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario_id = usuario.id;
+
+        const juego_id = Number(req.params.id);
+        if (isNaN(juego_id)) {
+            res.status(400).json({ msg: "id de juego inválido" });
+            return;
+        }
+
+        const juegoActualizado = await completarJuegoIA(usuario_id, juego_id);
+
+        res.json({
+            msg: "Juego actualizado correctamente",
+            juego: juegoActualizado,
+        });
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
+
+export {
+    traerJuegosController,
+    guardarJuegoIAController,
+    completarJuegoController,
+};

@@ -26,3 +26,22 @@ export const guardarJuegoIA = async (
     });
     return juegoIA;
 };
+
+export const completarJuegoIA = async (
+    usuario_id: number,
+    juego_id: number,
+): Promise<JuegosIAInstance> => {
+    const juego = await JuegosIA.findOne({
+        where: { id: juego_id, usuario_id },
+    });
+    if (!juego) {
+        throw new Error("No se encontró el juego");
+    }
+
+    // incrementar puntos en 5 y marcar como completado
+    juego.puntos = (juego.puntos || 0) + 5;
+    juego.completado = true;
+
+    await juego.save();
+    return juego;
+};
