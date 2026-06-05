@@ -5,6 +5,7 @@ import { UsuarioActualizado } from "../interfaces/Usuario";
 import Avatares from "../Models/avatarModel";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
+import JuegosIA from "../Models/juegos_iaModel";
 
 import { isString, isNumero } from "../Validations/validaciones";
 
@@ -144,6 +145,24 @@ export const obtenerPuntuacionUsuario = async (
     const puntos = puntosRaw as unknown as { puntos: number }[];
 
     const totalPuntos = puntos.reduce((acc, x) => acc + x.puntos, 0);
+
+    return totalPuntos;
+};
+
+export const obtenerPuntuacionusuarioIA = async (
+    idUser: number,
+): Promise<number> => {
+    const puntosRaw = await JuegosIA.findAll({
+        attributes: ["puntos"],
+        where: { usuario_id: idUser },
+        raw: true,
+    });
+
+    // Convertimos a unknown primero, luego a la forma correcta
+    const puntos = puntosRaw as unknown as { puntos: number }[];
+
+    const totalPuntos = puntos.reduce((acc, x) => acc + x.puntos, 0);
+
     return totalPuntos;
 };
 

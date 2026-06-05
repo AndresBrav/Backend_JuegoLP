@@ -4,10 +4,12 @@ import {
     mostrar_Notificacion,
 } from "../Controllers/notificacionController";
 import verifyToken from "../Middlewares/verifyToken";
-import { actualizar } from "../Controllers/usuariosController";
+import { obtenerUsuarioYPuntuacion } from "../Controllers/notificacionController";
 
 const router: Router = express.Router();
 router.get("/consultar", verifyToken, mostrar_Notificacion);
+
+router.get("/puntuacion", verifyToken, obtenerUsuarioYPuntuacion);
 
 router.put("/actualizar/:id", verifyToken, actualizar_Notificacion);
 

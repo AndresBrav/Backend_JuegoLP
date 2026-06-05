@@ -15,6 +15,7 @@ import {
     obtenerPuntuacionUsuario,
     IncrementarPuntosUsuario,
     servicioActualizarFoto,
+    obtenerPuntuacionusuarioIA,
 } from "../Services/usuarioServices";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
@@ -231,10 +232,10 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
 
     const puntuacion = await obtenerPuntuacionUsuario(idUser); //obtener los puntos del usuario
 
-    // console.log(totalPuntos); // 1
+    const puntuacionIA = await obtenerPuntuacionusuarioIA(idUser); //obtener los puntos del usuario en juegos IA
 
     // console.log(puntos);
-    res.json({ puntuacionTotal: puntuacion });
+    res.json({ puntuacionTotal: puntuacion + puntuacionIA });
 };
 
 const aumentarPuntuacion = async (

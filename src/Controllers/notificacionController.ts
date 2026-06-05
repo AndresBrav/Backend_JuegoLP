@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; // Importa verifyToken
-import { obtenerUnUsuarioServicio } from "../Services/usuarioServices";
+import {
+    obtenerUnUsuarioServicio,
+    obtenerPuntuacionUsuario,
+    obtenerPuntuacionusuarioIA,
+    obtenerTodosLosUsuarios,
+} from "../Services/usuarioServices";
 import {
     actualizar_Estado_Noti,
     mostrar_Notificacion_Servicio,
@@ -45,4 +50,35 @@ const actualizar_Notificacion = async (req: Request, res: Response) => {
     }
 };
 
-export { mostrar_Notificacion, actualizar_Notificacion };
+const obtenerUsuarioYPuntuacion = async (
+    req: AuthenticatedRequest,
+    res: Response,
+): Promise<void> => {
+    try {
+        const usuarios = await obtenerTodosLosUsuarios();
+
+        const usuariosConPuntos = await Promise.all(
+            usuarios.map(async (u) => {
+                const idUser = u.id;
+                const puntuacion = await obtenerPuntuacionUsuario(idUser);
+                const puntuacionIA = await obtenerPuntuacionusuarioIA(idUser);
+                return {
+                    username: u.username,
+                    puntuacionTotal: puntuacion + puntuacionIA,
+                };
+            }),
+        );
+
+        res.json(usuariosConPuntos);
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
+
+export {
+    mostrar_Notificacion,
+    actualizar_Notificacion,
+    obtenerUsuarioYPuntuacion,
+};
