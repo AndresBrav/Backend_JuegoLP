@@ -3,11 +3,21 @@ import JuegosIA, { JuegosIAInstance } from "../Models/juegos_iaModel";
 export const obtenerTodosLosJuegosIA = async (
     usuario_id: number,
 ): Promise<JuegosIAInstance[] | null> => {
-    const juegos = await JuegosIA.findAll({ where: { usuario_id }, raw: true });
-    if (!juegos || juegos.length === 0) {
-        throw new Error("No se encontraron juegos");
-    }
-    return juegos;
+    const juegos = await JuegosIA.findAll({
+        where: { usuario_id, tipo_juego: "ia" },
+        raw: true,
+    });
+    return juegos || [];
+};
+
+export const obtenerTodosLosJuegosIAPseudo = async (
+    usuario_id: number,
+): Promise<JuegosIAInstance[] | null> => {
+    const juegos = await JuegosIA.findAll({
+        where: { usuario_id, tipo_juego: "iapseudo" },
+        raw: true,
+    });
+    return juegos || [];
 };
 
 export const guardarJuegoIA = async (

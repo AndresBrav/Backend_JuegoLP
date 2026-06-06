@@ -4,6 +4,7 @@ import { consultarJuegos } from "../Controllers/juegosController";
 import {
     traerJuegosController,
     guardarJuegoIAController,
+    traerJuegosControllerPseudo,
 } from "../Controllers/juegosIAController";
 import { completarJuegoController } from "../Controllers/juegosIAController";
 
@@ -12,6 +13,8 @@ router.get("/consultar", verifyToken, consultarJuegos);
 
 // trae los juegos con IA que se guardo
 router.get("/traerJuegosConIA", verifyToken, traerJuegosController);
+
+router.get("/traerJuegosConIAPseudo", verifyToken, traerJuegosControllerPseudo);
 
 // guarda un nuevo juego con IA
 router.post("/guardarjuegoIA", verifyToken, guardarJuegoIAController);
