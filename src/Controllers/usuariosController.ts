@@ -16,6 +16,7 @@ import {
     IncrementarPuntosUsuario,
     servicioActualizarFoto,
     obtenerPuntuacionusuarioIA,
+    obtenerJuegosCompletadosUsuario,
 } from "../Services/usuarioServices";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
@@ -238,6 +239,29 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     res.json({ puntuacionTotal: puntuacion + puntuacionIA });
 };
 
+const traerJuegosCompletados = async (
+    req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const nombre: string = req.DatosToken?.username;
+        const password: string = req.DatosToken?.password;
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const idUser = usuario.id;
+
+        const juegosCompletados =
+            await obtenerJuegosCompletadosUsuario(idUser);
+
+        res.json({ juegosCompletados });
+    } catch (error: any) {
+        console.error("ERROR traerJuegosCompletados:", error);
+        res.status(500).json({
+            message: "Error interno",
+            error: error.message,
+        });
+    }
+};
+
 const aumentarPuntuacion = async (
     req: AuthenticatedRequest,
     res: Response,
@@ -326,6 +350,7 @@ export {
     verificarLogin,
     traerDatosUnUsuario,
     traerPuntuacion,
+    traerJuegosCompletados,
     aumentarPuntuacion,
     actualizarPefilFoto,
 };

@@ -9,6 +9,7 @@ import {
     verificarLogin,
     traerDatosUnUsuario,
     traerPuntuacion,
+    traerJuegosCompletados,
     aumentarPuntuacion,
     actualizarPefilFoto,
 } from "../Controllers/usuariosController"; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
@@ -66,6 +67,8 @@ router.post("/login/iniciar", async (req: Request, res: Response) => {
 router.get("/traerDatosUsuario", verifyToken, traerDatosUnUsuario);
 
 router.get("/traerpuntuacion", verifyToken, traerPuntuacion);
+
+router.get("/traerJuegosCompletados", verifyToken, traerJuegosCompletados);
 
 router.put("/incrpuntos/:idjuego", verifyToken, aumentarPuntuacion);
 

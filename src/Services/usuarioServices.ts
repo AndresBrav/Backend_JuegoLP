@@ -149,6 +149,22 @@ export const obtenerPuntuacionUsuario = async (
     return totalPuntos;
 };
 
+export const obtenerJuegosCompletadosUsuario = async (
+    idUser: number,
+): Promise<number[]> => {
+    const juegosRaw = await UsuarioJuegos.findAll({
+        attributes: ["juego_id"],
+        where: { usuario_id: idUser, completado: true },
+        raw: true,
+    });
+
+    const juegos = juegosRaw as unknown as { juego_id: number }[];
+
+    const juegosCompletados = juegos.map((j) => Number(j.juego_id));
+
+    return juegosCompletados;
+};
+
 export const obtenerPuntuacionusuarioIA = async (
     idUser: number,
 ): Promise<number> => {
