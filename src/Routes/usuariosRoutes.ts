@@ -36,6 +36,42 @@ router
 router.post("/login/registrar", RegistrarLogin); //Ruta para registrar un nuevo usuario e inicia sesion
 
 //Ruta para obtener un token
+/**
+ * @swagger
+ * /usuarios/login/iniciar:
+ *   post:
+ *     tags: [Usuarios]
+ *     summary: Iniciar sesión y obtener un token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token de acceso o mensaje de error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/AuthResponse'
+ *                 - type: object
+ *                   properties:
+ *                     msg:
+ *                       type: string
+ *                       example: el usuario que ingresaste no existe Registrate
+ *       400:
+ *         description: Faltan datos en la solicitud
+ */
 router.post("/login/iniciar", async (req: Request, res: Response) => {
     const { username, password } = req.body;
 

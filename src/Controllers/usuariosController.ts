@@ -26,6 +26,35 @@ dotenv.config(); // ¡Esto carga el archivo .env!
 import { encrypt, decrypt } from "../utils/encriptador";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 
+/**
+ * @swagger
+ * /usuarios/consultar:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Listar todos los usuarios
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 username:
+ *                   type: string
+ *                 msg:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Usuario'
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
     try {
         console.log("Datos del token:", req.DatosToken?.username); // Sin await
@@ -42,6 +71,42 @@ const consultarUsuarios = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Función para consultar detalles de un usuario
+/**
+ * @swagger
+ * /usuarios/detalles/{id}:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Consultar el detalle de un usuario
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Identificador del usuario
+ *     responses:
+ *       200:
+ *         description: Detalle del usuario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 msg:
+ *                   $ref: '#/components/schemas/Usuario'
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
@@ -61,6 +126,49 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Función para ingresar un nuevo usuario
+/**
+ * @swagger
+ * /usuarios/ingresar:
+ *   post:
+ *     tags: [Usuarios]
+ *     summary: Crear un nuevo usuario
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - edad
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               edad:
+ *                 type: integer
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Resultado de la creación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: se creo correctamente el usuario
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const ingresar = async (req: Request, res: Response) => {
     try {
         const { username, edad, password } = req.body;
@@ -91,6 +199,52 @@ const ingresar = async (req: Request, res: Response) => {
 };
 
 // Función para actualizar un usuario
+/**
+ * @swagger
+ * /usuarios/detalles/{id}:
+ *   put:
+ *     tags: [Usuarios]
+ *     summary: Actualizar un usuario
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Identificador del usuario
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               edad:
+ *                 type: integer
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Usuario actualizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: el usuario fue actualizado con exito
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const actualizar = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -119,6 +273,41 @@ const actualizar = async (req: Request, res: Response) => {
 };
 
 // Función para borrar un usuario
+/**
+ * @swagger
+ * /usuarios/detalles/{id}:
+ *   delete:
+ *     tags: [Usuarios]
+ *     summary: Borrar un usuario
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Identificador del usuario
+ *     responses:
+ *       200:
+ *         description: Usuario eliminado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: el usuario fue eliminado con exito
+ *       404:
+ *         description: No existe el usuario
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const borrar = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -143,6 +332,39 @@ const borrar = async (req: Request, res: Response) => {
 };
 
 // Función para ingresar un nuevo usuario
+/**
+ * @swagger
+ * /usuarios/login/registrar:
+ *   post:
+ *     tags: [Usuarios]
+ *     summary: Registrar un nuevo usuario e iniciar sesión
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - edad
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               edad:
+ *                 type: integer
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token de acceso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Faltan datos en la solicitud
+ */
 const RegistrarLogin = async (req: Request, res: Response) => {
     const { username, edad, password } = req.body;
 
@@ -206,6 +428,34 @@ const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
     return registro; // 🔁 esto hace internamente un `resolve(registro)`
 };
 
+/**
+ * @swagger
+ * /usuarios/traerDatosUsuario:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Obtener datos del usuario autenticado
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Datos del usuario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 nombre:
+ *                   type: string
+ *                 edad:
+ *                   type: integer
+ *                 idAvatar:
+ *                   type: string
+ *                   description: URL del avatar
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ */
 const traerDatosUnUsuario = async (
     req: AuthenticatedRequest,
     res: Response,
@@ -224,6 +474,30 @@ const traerDatosUnUsuario = async (
     });
 };
 
+/**
+ * @swagger
+ * /usuarios/traerpuntuacion:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Obtener la puntuación total del usuario autenticado
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Puntuación total
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 puntuacionTotal:
+ *                   type: integer
+ *                   description: Suma de puntos de juegos normales e IA
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ */
 const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     const nombre: string = req.DatosToken?.username;
     const password: string = req.DatosToken?.password;
@@ -239,6 +513,33 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     res.json({ puntuacionTotal: puntuacion + puntuacionIA });
 };
 
+/**
+ * @swagger
+ * /usuarios/traerJuegosCompletados:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Obtener los juegos completados del usuario autenticado
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de ids de juegos completados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 juegosCompletados:
+ *                   type: array
+ *                   items:
+ *                     type: integer
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const traerJuegosCompletados = async (
     req: AuthenticatedRequest,
     res: Response,
@@ -262,6 +563,37 @@ const traerJuegosCompletados = async (
     }
 };
 
+/**
+ * @swagger
+ * /usuarios/incrpuntos/{idjuego}:
+ *   put:
+ *     tags: [Usuarios]
+ *     summary: Incrementar puntos por completar un juego
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: idjuego
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Identificador del juego
+ *     responses:
+ *       200:
+ *         description: Registro actualizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UsuarioJuegos'
+ *       201:
+ *         description: Registro creado (primera vez que completa el juego)
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const aumentarPuntuacion = async (
     req: AuthenticatedRequest,
     res: Response,
@@ -312,6 +644,39 @@ const aumentarPuntuacion = async (
     }
 };
 
+/**
+ * @swagger
+ * /usuarios/actualizarPefilFoto/{idFoto}:
+ *   put:
+ *     tags: [Usuarios]
+ *     summary: Actualizar la foto de perfil del usuario autenticado
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: idFoto
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Identificador del nuevo avatar
+ *     responses:
+ *       200:
+ *         description: Foto de perfil actualizada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: se actualizo la foto de perfil correctamente
+ *                 user:
+ *                   $ref: '#/components/schemas/Usuario'
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ */
 const actualizarPefilFoto = async (
     req: AuthenticatedRequest,
     res: Response,

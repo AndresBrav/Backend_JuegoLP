@@ -13,6 +13,9 @@ import morgan from "morgan";
 import db from "../db/conexion";
 import { iniciarCronJobs } from "../cron/notificaciones"; //automatizaciones de cron
 
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger";
+
 // aqui es la base de datos y rutas
 class ApiServer {
     private usuariosPath: string;
@@ -21,6 +24,7 @@ class ApiServer {
     private juegosPath: string;
     private avataresPath: string;
     private notificationPath: string;
+    private apiDocsPath: string;
 
     constructor() {
         this.app = express();
@@ -29,6 +33,7 @@ class ApiServer {
         this.juegosPath = "/juegos";
         this.avataresPath = "/avatares";
         this.notificationPath = "/notificaciones";
+        this.apiDocsPath = "/api-docs";
         this.middlewares(); // Llama a la función middleware
         this.routes(); // Registra las rutas
         this.dbConnet(); //conexion a la base de datos
@@ -49,6 +54,10 @@ class ApiServer {
     }
 
     public routes(): void {
+        this.app.use(this.apiDocsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+        this.app.get("/", (_req: Request, res: Response) => {
+            res.redirect(this.apiDocsPath);
+        });
         this.app.use(this.usuariosPath, UsuariosRoutes);
         this.app.use(this.pruebasPath, PruebasRoutes);
         this.app.use(this.juegosPath, JuegosRoutes);

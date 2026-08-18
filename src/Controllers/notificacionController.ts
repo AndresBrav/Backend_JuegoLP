@@ -11,6 +11,34 @@ import {
     mostrar_Notificacion_Servicio,
 } from "../Services/notificacionServicio";
 
+/**
+ * @swagger
+ * /notificaciones/consultar:
+ *   get:
+ *     tags: [Notificaciones]
+ *     summary: Listar las notificaciones no leídas del usuario autenticado
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de notificaciones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: "La lista de notificaciones es:"
+ *                 arreglonoti:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Notificacion'
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ */
 const mostrar_Notificacion = async (
     req: AuthenticatedRequest,
     res: Response,
@@ -30,6 +58,39 @@ const mostrar_Notificacion = async (
     });
 };
 
+/**
+ * @swagger
+ * /notificaciones/actualizar/{id}:
+ *   put:
+ *     tags: [Notificaciones]
+ *     summary: Marcar una notificación como leída
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Identificador de la notificación
+ *     responses:
+ *       200:
+ *         description: Notificación actualizada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: La notificacion fue actualizada
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const actualizar_Notificacion = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -50,6 +111,35 @@ const actualizar_Notificacion = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * @swagger
+ * /notificaciones/puntuacion:
+ *   get:
+ *     tags: [Notificaciones]
+ *     summary: Obtener el ranking de usuarios con su puntuación total
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Ranking de usuarios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   username:
+ *                     type: string
+ *                   puntuacionTotal:
+ *                     type: integer
+ *       401:
+ *         description: Token no válido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
 const obtenerUsuarioYPuntuacion = async (
     req: AuthenticatedRequest,
     res: Response,
