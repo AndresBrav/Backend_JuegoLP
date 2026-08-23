@@ -159,6 +159,9 @@ const obtenerUsuarioYPuntuacion = async (
             }),
         );
 
+        // Ordenar descendentemente por puntuacionTotal
+        usuariosConPuntos.sort((a, b) => b.puntuacionTotal - a.puntuacionTotal);
+
         res.json(usuariosConPuntos);
     } catch (err) {
         if (err instanceof Error) {
