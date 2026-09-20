@@ -1,6 +1,11 @@
 import cron from "node-cron";
 import Notificaciones from "../Models/NotificacionesModel";
 import Usuarios from "../Models/usuarioModel";
+import {
+    obtenerPuntuacionUsuario,
+    obtenerPuntuacionusuarioIA,
+} from "../Services/usuarioServices";
+import { Op } from "sequelize";
 
 // * * * * * *
 // │ │ │ │ │ │
@@ -27,12 +32,14 @@ export const iniciarCronJobs = async () => {
 
     // 2. Tip de lógica y motivación gamificada por la tarde (2:00 PM)
     await Notificaciones_Tips_Gamificados();
+
+    // 3. Felicitación por hitos de puntuación cada 50 puntos
+    await Notificaciones_Progreso_Puntos();
 };
 
 export const Notificaciones_Diaria = async () => {
     cron.schedule(
-        // "0 8 * * *",
-        "* * * * * ",
+        "0 8 * * *",
         async () => {
             console.log("Ejecutando tarea diaria a las 8:00 am");
 
@@ -83,8 +90,7 @@ const MENSAJES_GAMIFICADOS: string[] = [
 export const Notificaciones_Tips_Gamificados = async () => {
     // Se ejecuta diariamente a las 2:00 PM (14:00 hrs)
     cron.schedule(
-        // "0 14 * * *",
-        "* * * * * ",
+        "0 14 * * *",
         async () => {
             console.log(
                 "Ejecutando tarea de tips gamificados a las 2:00 pm (14:00 hrs)",
@@ -129,12 +135,67 @@ export const Notificaciones_Tips_Gamificados = async () => {
     );
 };
 
-// cron.schedule(
-//     "0 8 * * *",
-//     () => {
-//         console.log("Ejecutando tarea diaria a las 8 AM");
-//     },
-//     {
-//         timezone: "America/La_Paz",
-//     },
-// );
+export const Notificaciones_Progreso_Puntos = async () => {
+    // Revisa periódicamente cada hora ("0 * * * *") o cada 5 minutos ("*/5 * * * *")
+    cron.schedule(
+        // "0 * * * *",
+        "* * * * * ",
+        async () => {
+            console.log("Revisando notificaciones de hitos de puntuación...");
+
+            try {
+                const users = await Usuarios.findAll({
+                    attributes: ["id", "username"],
+                    raw: true,
+                });
+
+                for (const user of users) {
+                    const idUser = user.id;
+
+                    const pNormal = await obtenerPuntuacionUsuario(idUser);
+                    const pIA = await obtenerPuntuacionusuarioIA(idUser);
+                    const totalPuntos = pNormal + pIA;
+
+                    // Mayor hito alcanzado de 50 en 50
+                    const hitoAlcanzado = Math.floor(totalPuntos / 50) * 50;
+
+                    if (hitoAlcanzado >= 50) {
+                        const textoNotificacion = `🎉 ¡Felicidades! Has alcanzado los ${hitoAlcanzado} puntos en tu aprendizaje de lógica.`;
+
+                        // Verificar si ya existe una notificación para este hito
+                        const notificacionExiste = await Notificaciones.findOne(
+                            {
+                                where: {
+                                    usuario_id: idUser,
+                                    descripcion: {
+                                        [Op.like]: `%${hitoAlcanzado} puntos%`,
+                                    },
+                                },
+                            },
+                        );
+
+                        if (!notificacionExiste) {
+                            await Notificaciones.create({
+                                descripcion: textoNotificacion,
+                                usuario_id: idUser,
+                                leido: false,
+                                fecha: new Date(),
+                            });
+                            console.log(
+                                `Notificación de ${hitoAlcanzado} puntos enviada a ${user.username}`,
+                            );
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(
+                    "Error al revisar notificaciones de puntos:",
+                    error,
+                );
+            }
+        },
+        {
+            timezone: "America/La_Paz",
+        },
+    );
+};
