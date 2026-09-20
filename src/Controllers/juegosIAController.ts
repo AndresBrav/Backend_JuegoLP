@@ -265,9 +265,25 @@ const completarJuegoController = async (
     }
 };
 
+const obtenerGeminiKeyController = async (
+    _req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const apiKey = process.env.GEMINI_API_KEY || "";
+        res.json({ apiKey });
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
+
 export {
     traerJuegosController,
     guardarJuegoIAController,
     completarJuegoController,
     traerJuegosControllerPseudo,
+    obtenerGeminiKeyController,
 };
+
