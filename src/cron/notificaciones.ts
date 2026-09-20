@@ -139,7 +139,7 @@ export const Notificaciones_Progreso_Puntos = async () => {
     // Revisa periódicamente cada hora ("0 * * * *") o cada 5 minutos ("*/5 * * * *")
     cron.schedule(
         // "0 * * * *",
-        "* * * * * ",
+        "*/20 * * * * ", // cada 20 minutos
         async () => {
             console.log("Revisando notificaciones de hitos de puntuación...");
 
