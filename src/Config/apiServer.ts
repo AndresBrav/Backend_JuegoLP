@@ -40,13 +40,13 @@ class ApiServer {
     }
 
     private middlewares(): void {
-        this.app.use(cors());
-        // this.app.use(
-        //     cors({
-        //         origin: true, // Refleja el origin que venga
-        //         credentials: false,
-        //     })
-        // );
+        // this.app.use(cors());
+        this.app.use(
+            cors({
+                origin: true, // Refleja el origin que venga
+                credentials: false,
+            }),
+        );
 
         this.app.use(express.json());
         this.app.use(morgan("dev"));
@@ -54,7 +54,11 @@ class ApiServer {
     }
 
     public routes(): void {
-        this.app.use(this.apiDocsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+        this.app.use(
+            this.apiDocsPath,
+            swaggerUi.serve,
+            swaggerUi.setup(swaggerSpec),
+        );
         this.app.get("/", (_req: Request, res: Response) => {
             res.redirect(this.apiDocsPath);
         });
