@@ -5,7 +5,7 @@ import Notificaciones, {
 export const mostrar_Notificacion_Servicio = async (
     usuario_id: number,
 ): Promise<NotificacionesInstance[]> => {
-    // notificacines de un usuario
+    // notificaciones de un usuario ordenadas de mas reciente a mas antigua
     const arregloNotificacion: NotificacionesInstance[] =
         await Notificaciones.findAll({
             attributes: ["id", "descripcion", "fecha"],
@@ -13,6 +13,7 @@ export const mostrar_Notificacion_Servicio = async (
                 usuario_id: usuario_id,
                 leido: false,
             },
+            order: [["id", "DESC"]],
             raw: true,
         });
     return arregloNotificacion;
