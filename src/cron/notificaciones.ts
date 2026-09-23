@@ -82,7 +82,6 @@ const MENSAJES_GAMIFICADOS: string[] = [
     "🔄 Atención con los bucles: Asegúrate de tener una condición de salida clara en tu ciclo para evitar bucles infinitos.",
     "🎯 ¡Hoy es un gran día para practicar! Completa un ejercicio de pseudocódigo y acumula puntos.",
     "🏆 Sigue practicando: Cada ejercicio resuelto te ayuda a escalar posiciones en la tabla de clasificación.",
-    "🎨 Recuerda revisar tu perfil: Al acumular puntos podrás desbloquear nuevos avatares.",
     "📝 Comentarios explicativos: Explicar en palabras sencillas lo que hace una sección de tu algoritmo mejora tu pensamiento lógico.",
     "⚡ Desafío de lógica: Intenta resolver un diagrama de flujo de selección múltiple hoy en la plataforma.",
 ];
