@@ -1,4 +1,4 @@
-import express, { Request, Response, Router } from "express";
+import express, { Router } from "express";
 import {
     consultarUsuarios,
     consultarDetalle,
@@ -6,20 +6,18 @@ import {
     actualizar,
     borrar,
     RegistrarLogin,
-    verificarLogin,
+    iniciarSesion,
+    traerMiPerfil,
     traerDatosUnUsuario,
     traerPuntuacion,
     traerJuegosCompletados,
     aumentarPuntuacion,
     actualizarPefilFoto,
-} from "../Controllers/usuariosController"; // Asegúrate de importar las funciones from '../Controllers/usuariosController'
-import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
-// import cors from "cors";
-import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; // Importa verifyToken
-import { Usuario } from "../interfaces/Usuario";
+} from "../Controllers/usuariosController";
+import verifyToken from "../Middlewares/verifyToken";
+import cargarUsuarioActual from "../Middlewares/cargarUsuarioActual";
 import * as dotenv from "dotenv";
-dotenv.config(); // ¡Esto carga el archivo .env!
-import { encrypt, decrypt } from "../utils/encriptador";
+dotenv.config();
 
 const router: Router = express.Router();
 
@@ -29,19 +27,18 @@ router.post("/ingresar", verifyToken, ingresar);
 
 router
     .route("/detalles/:id")
-    .get(verifyToken, consultarDetalle) // Aplica verifyToken al método GET
-    .put(verifyToken, actualizar) // Aplica verifyToken al método PUT
+    .get(verifyToken, consultarDetalle)
+    .put(verifyToken, actualizar)
     .delete(verifyToken, borrar);
 
-router.post("/login/registrar", RegistrarLogin); //Ruta para registrar un nuevo usuario e inicia sesion
+router.post("/login/registrar", RegistrarLogin);
 
-//Ruta para obtener un token
 /**
  * @swagger
  * /usuarios/login/iniciar:
  *   post:
  *     tags: [Usuarios]
- *     summary: Iniciar sesión y obtener un token
+ *     summary: Iniciar sesión con username o código institucional
  *     requestBody:
  *       required: true
  *       content:
@@ -54,6 +51,7 @@ router.post("/login/registrar", RegistrarLogin); //Ruta para registrar un nuevo 
  *             properties:
  *               username:
  *                 type: string
+ *                 description: Nombre de usuario o código institucional
  *               password:
  *                 type: string
  *     responses:
@@ -72,32 +70,9 @@ router.post("/login/registrar", RegistrarLogin); //Ruta para registrar un nuevo 
  *       400:
  *         description: Faltan datos en la solicitud
  */
-router.post("/login/iniciar", async (req: Request, res: Response) => {
-    const { username, password } = req.body;
+router.post("/login/iniciar", iniciarSesion);
 
-    if (!username || !password) {
-        res.status(400).json({ message: "Faltan datos en la solicitud" });
-        return;
-    }
-
-    const usuario: Usuario = { username, password };
-
-    let existe = await verificarLogin(usuario); //verifica que el usuario exista en la BD
-    console.log(existe);
-    if (existe) {
-        //Crear un token con expiración
-        const secretKey =
-            process.env.CLAVE_JWT ??
-            "no hay clave"; /* ?? solo undefined o null */
-        const tokenA = jwt.sign(usuario, secretKey, { expiresIn: "30d" });
-        const tokenEncriptado = encrypt(tokenA);
-        const token = tokenEncriptado;
-        // res.json({ token });
-        res.json({ token });
-    } else {
-        res.json({ msg: "el usuario que ingresaste no existe Registrate" });
-    }
-});
+router.get("/me", verifyToken, cargarUsuarioActual, traerMiPerfil);
 
 // Ruta protegida que requiere token
 router.get("/traerDatosUsuario", verifyToken, traerDatosUnUsuario);
@@ -106,7 +81,12 @@ router.get("/traerpuntuacion", verifyToken, traerPuntuacion);
 
 router.get("/traerJuegosCompletados", verifyToken, traerJuegosCompletados);
 
-router.put("/incrpuntos/:idjuego", verifyToken, aumentarPuntuacion);
+router.put(
+    "/incrpuntos/:idjuego",
+    verifyToken,
+    cargarUsuarioActual,
+    aumentarPuntuacion,
+);
 
 router.put("/actualizarPefilFoto/:idFoto", verifyToken, actualizarPefilFoto);
 

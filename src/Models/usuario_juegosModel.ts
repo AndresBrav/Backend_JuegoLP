@@ -1,5 +1,5 @@
-import { DataTypes, Model, Sequelize } from "sequelize";
-import db from "../db/conexion"; // Asegúrate de que esta ruta sea correcta
+import { DataTypes, Model } from "sequelize";
+import db from "../db/conexion";
 
 interface UsuariosJuegosAttributes {
     id?: number;
@@ -7,16 +7,14 @@ interface UsuariosJuegosAttributes {
     juego_id?: number;
     completado?: boolean;
     puntos?: number;
+    fecha_completado?: Date | null;
+    ultima_actividad?: Date | null;
+    intentos?: number;
 }
 
-// Define una interfaz para la instancia del modelo
 export interface UsuariosJuegosInstance
-    extends Model<UsuariosJuegosAttributes>, // incluye métodos como .save(), .destroy(), etc. // Métodos de Sequelize con tipos
-        UsuariosJuegosAttributes {} // permite acceder directamente a username, edad, password
+    extends Model<UsuariosJuegosAttributes>, UsuariosJuegosAttributes {}
 
-// permite acceder directamente a username, edad, password
-
-// Define el modelo con los tipos específicos
 const UsuarioJuegos = db.define<UsuariosJuegosInstance>(
     "UsuarioJuegos",
     {
@@ -36,11 +34,24 @@ const UsuarioJuegos = db.define<UsuariosJuegosInstance>(
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        fecha_completado: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        ultima_actividad: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        intentos: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
     },
     {
         tableName: "Usuario_Juegos",
         timestamps: false,
-    }
+    },
 );
 
 export default UsuarioJuegos;

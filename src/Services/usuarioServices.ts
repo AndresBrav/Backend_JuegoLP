@@ -1,4 +1,5 @@
-import { Usuario } from "../interfaces/Usuario";
+import { Op } from "sequelize";
+import { Rol, Usuario } from "../interfaces/Usuario";
 // import Usuarios from "../Models/usuariosModel"
 
 import { UsuarioActualizado } from "../interfaces/Usuario";
@@ -42,18 +43,26 @@ export const consultarDetalleUsuario = async (
 };
 
 export const aniadirUsuario = async (
+    codigo: any,
     username: any,
     edad: any,
     password: any,
+    rol: any = "estudiante",
 ): Promise<boolean> => {
-    if (isNumero(edad) && isString(username) && isString(password)) {
-        const usuarioA: UsuarioActualizado = { username, edad, password };
-        // const usuario = {
-        //     username,
-        //     edad,
-        //     password
-        // };
-        await Usuarios.create(usuarioA);
+    if (
+        isString(codigo) &&
+        isNumero(edad) &&
+        isString(username) &&
+        isString(password)
+    ) {
+        await Usuarios.create({
+            codigo: codigo.trim(),
+            username,
+            edad,
+            password,
+            rol: rol === "profesor" ? "profesor" : "estudiante",
+            idAvatar: 1,
+        });
         return true;
     } else {
         return false;
@@ -208,3 +217,77 @@ export const servicioActualizarFoto = async (
         throw error;
     }
 };
+
+/* ------------------------------------------------------------------ */
+/* Autenticación, registro y perfil                                    */
+/* ------------------------------------------------------------------ */
+
+export const buscarUsuarioPorId = async (
+    id: number,
+): Promise<UsuariosInstance | null> => {
+    return Usuarios.findByPk(id);
+};
+
+/** Permite iniciar sesión con el username o con el código institucional. */
+export const buscarUsuarioPorIdentificador = async (
+    identificador: string,
+): Promise<UsuariosInstance | null> => {
+    return Usuarios.findOne({
+        where: {
+            [Op.or]: [
+                { username: identificador },
+                { codigo: identificador },
+            ],
+        },
+    });
+};
+
+export const existeUsername = async (username: string): Promise<boolean> => {
+    const total = await Usuarios.count({ where: { username } });
+    return total > 0;
+};
+
+export const existeCodigo = async (codigo: string): Promise<boolean> => {
+    const total = await Usuarios.count({ where: { codigo } });
+    return total > 0;
+};
+
+export const crearUsuario = async (datos: {
+    codigo: string;
+    username: string;
+    edad: number;
+    password: string;
+    rol: Rol;
+    idAvatar?: number;
+}): Promise<UsuariosInstance> => {
+    return Usuarios.create({
+        ...datos,
+        idAvatar: datos.idAvatar ?? 1,
+    });
+};
+
+export const obtenerPerfilCompleto = async (id: number) => {
+    const usuario = await Usuarios.findByPk(id);
+
+    if (!usuario) {
+        return null;
+    }
+
+    const avatar = usuario.idAvatar
+        ? await Avatares.findByPk(usuario.idAvatar)
+        : null;
+
+    const puntosFijos = await obtenerPuntuacionUsuario(id);
+    const puntosIA = await obtenerPuntuacionusuarioIA(id);
+
+    return {
+        id,
+        codigo: usuario.codigo,
+        username: usuario.username,
+        edad: usuario.edad,
+        rol: usuario.rol,
+        avatarUrl: avatar ? avatar.url : null,
+        puntos: puntosFijos + puntosIA,
+    };
+};
+

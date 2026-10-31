@@ -1,24 +1,23 @@
-import { DataTypes, Model, Sequelize } from "sequelize";
-import db from "../db/conexion"; // Asegúrate de que esta ruta sea correcta
+import { DataTypes, Model } from "sequelize";
+import db from "../db/conexion";
 import UsuarioJuegos from "./usuario_juegosModel";
-import Notificaciones from "./NotificacionesModel"; //importamos las notificaciones
+import Notificaciones from "./NotificacionesModel";
 import JuegosIA from "./juegos_iaModel";
-// Define una interfaz para los atributos del modelo
+import { Rol } from "../interfaces/Usuario";
+
 interface UsuariosAttributes {
     id?: number;
+    codigo?: string;
     username?: string;
     edad?: number;
     password?: string;
     idAvatar?: number;
+    rol?: Rol;
 }
 
-// Define una interfaz para la instancia del modelo
 export interface UsuariosInstance
-    extends
-        Model<UsuariosAttributes>, // incluye métodos como .save(), .destroy(), etc. // Métodos de Sequelize con tipos
-        UsuariosAttributes {} // permite acceder directamente a username, edad, password
+    extends Model<UsuariosAttributes>, UsuariosAttributes {}
 
-// Define el modelo con los tipos específicos
 const Usuarios = db.define<UsuariosInstance>(
     "Usuarios",
     {
@@ -27,9 +26,15 @@ const Usuarios = db.define<UsuariosInstance>(
             autoIncrement: true,
             primaryKey: true,
         },
+        codigo: {
+            type: DataTypes.STRING(20),
+            allowNull: false,
+            unique: true,
+        },
         username: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique: true,
         },
         edad: {
             type: DataTypes.INTEGER,
@@ -42,6 +47,11 @@ const Usuarios = db.define<UsuariosInstance>(
         idAvatar: {
             type: DataTypes.INTEGER,
             allowNull: false,
+        },
+        rol: {
+            type: DataTypes.ENUM("estudiante", "profesor", "admin"),
+            allowNull: false,
+            defaultValue: "estudiante",
         },
     },
     {

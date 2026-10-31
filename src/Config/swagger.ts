@@ -11,7 +11,7 @@ const swaggerOptions: Options = {
             title: "Backend API",
             version: "1.0.0",
             description:
-                "Documentación de la API del proyecto fullstack (usuarios, juegos, avatares y notificaciones).",
+                "Documentación de la API del proyecto fullstack (usuarios, roles, grupos, reportes, juegos, avatares y notificaciones).",
         },
         servers: [
             {
@@ -34,10 +34,34 @@ const swaggerOptions: Options = {
                     type: "object",
                     properties: {
                         id: { type: "integer", description: "Identificador del usuario" },
+                        codigo: {
+                            type: "string",
+                            description:
+                                "Código institucional único (string, conserva ceros a la izquierda)",
+                            example: "201904950",
+                        },
                         username: { type: "string", description: "Nombre de usuario" },
                         edad: { type: "integer", description: "Edad del usuario" },
                         password: { type: "string", description: "Contraseña del usuario" },
                         idAvatar: { type: "integer", description: "Identificador del avatar asignado" },
+                        rol: {
+                            type: "string",
+                            enum: ["estudiante", "profesor", "admin"],
+                            description: "Rol del usuario",
+                        },
+                    },
+                },
+                Grupo: {
+                    type: "object",
+                    properties: {
+                        id: { type: "integer" },
+                        nombre: { type: "string", example: "10-A" },
+                        codigo: {
+                            type: "string",
+                            example: "A7K2P9",
+                            description: "Código para que los estudiantes se unan",
+                        },
+                        profesor_id: { type: "integer" },
                     },
                 },
                 Juego: {
@@ -88,6 +112,23 @@ const swaggerOptions: Options = {
                         juego_id: { type: "integer" },
                         completado: { type: "boolean" },
                         puntos: { type: "integer" },
+                        fecha_completado: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                            description:
+                                "Fecha de la primera vez que se completó el juego",
+                        },
+                        ultima_actividad: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                            description: "Última vez que el usuario interactuó",
+                        },
+                        intentos: {
+                            type: "integer",
+                            description: "Número de intentos registrados",
+                        },
                     },
                 },
                 AuthResponse: {

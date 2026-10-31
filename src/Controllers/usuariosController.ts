@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; // Importa verifyToken
-import { Usuario } from "../interfaces/Usuario";
+import { Rol, Usuario } from "../interfaces/Usuario";
 
 import {
     obtenerTodosLosUsuarios,
@@ -17,6 +17,11 @@ import {
     servicioActualizarFoto,
     obtenerPuntuacionusuarioIA,
     obtenerJuegosCompletadosUsuario,
+    buscarUsuarioPorIdentificador,
+    crearUsuario,
+    existeCodigo,
+    existeUsername,
+    obtenerPerfilCompleto,
 } from "../Services/usuarioServices";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
@@ -25,6 +30,29 @@ import * as dotenv from "dotenv";
 dotenv.config(); // ¡Esto carga el archivo .env!
 import { encrypt, decrypt } from "../utils/encriptador";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
+import { RequestAutenticado } from "../Middlewares/cargarUsuarioActual";
+import {
+    esCodigoValido,
+    esRolDeRegistro,
+    normalizarCodigo,
+} from "../Validations/validaciones";
+
+/** Firma el JWT, lo cifra y devuelve el token que consume el cliente. */
+const firmarToken = (usuario: UsuariosInstance): string => {
+    const secretKey = process.env.CLAVE_JWT ?? "no hay clave";
+
+    const payload = {
+        id: usuario.id,
+        codigo: usuario.codigo,
+        username: usuario.username,
+        password: usuario.password,
+        rol: usuario.rol,
+    };
+
+    const token = jwt.sign(payload, secretKey, { expiresIn: "30d" });
+    return encrypt(token);
+};
+
 
 /**
  * @swagger
@@ -141,16 +169,25 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
  *           schema:
  *             type: object
  *             required:
+ *               - codigo
  *               - username
  *               - edad
  *               - password
  *             properties:
+ *               codigo:
+ *                 type: string
+ *                 description: Código institucional único
+ *                 example: "201904950"
  *               username:
  *                 type: string
  *               edad:
  *                 type: integer
  *               password:
  *                 type: string
+ *               rol:
+ *                 type: string
+ *                 enum: [estudiante, profesor]
+ *                 default: estudiante
  *     responses:
  *       200:
  *         description: Resultado de la creación
@@ -162,6 +199,8 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
  *                 msg:
  *                   type: string
  *                   example: se creo correctamente el usuario
+ *       400:
+ *         description: Falta el código institucional
  *       401:
  *         description: Token no válido
  *       403:
@@ -171,11 +210,21 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
  */
 const ingresar = async (req: Request, res: Response) => {
     try {
-        const { username, edad, password } = req.body;
+        const { codigo, username, edad, password, rol } = req.body ?? {};
+
+        if (!codigo) {
+            res.status(400).json({
+                message: "El código institucional es obligatorio",
+            });
+            return;
+        }
+
         const datosCorrectos: boolean = await aniadirUsuario(
+            codigo,
             username,
             edad,
             password,
+            rol,
         );
 
         // console.log("vamos a verificar")
@@ -345,88 +394,192 @@ const borrar = async (req: Request, res: Response) => {
  *           schema:
  *             type: object
  *             required:
+ *               - codigo
  *               - username
  *               - edad
  *               - password
+ *               - rol
  *             properties:
+ *               codigo:
+ *                 type: string
+ *                 description: Código institucional único (4 a 20 caracteres)
+ *                 example: "201904950"
  *               username:
  *                 type: string
  *               edad:
  *                 type: integer
  *               password:
  *                 type: string
+ *               rol:
+ *                 type: string
+ *                 enum: [estudiante, profesor]
+ *                 description: admin no se permite por registro público
  *     responses:
- *       200:
+ *       201:
  *         description: Token de acceso
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/AuthResponse'
  *       400:
- *         description: Faltan datos en la solicitud
+ *         description: Faltan datos o son inválidos
+ *       409:
+ *         description: Código o usuario ya registrado
  */
 const RegistrarLogin = async (req: Request, res: Response) => {
-    const { username, edad, password } = req.body;
+    try {
+        const { codigo, username, edad, password, rol } = req.body ?? {};
 
-    if (!username || !password || !edad) {
-        res.status(400).json({ message: "Faltan datos en la solicitud" });
-        return;
-    }
-    // const usuario:Usuario = { username, password };
-    if (typeof username === "string" && typeof password === "string") {
-        console.log("los datos son de tipo string");
-        const usuario = { username, edad, password, idAvatar: 1 };
-        await Usuarios.create(usuario); //lo crea en la base de datos
-
-        const UsuarioA = { username, password };
-
-        const UsuarioArevisar: Usuario = UsuarioA;
-        let existe = await verificarLogin(UsuarioArevisar);
-        // console.log(existe)
-        if (existe) {
-            //Crear un token con expiración
-            const secretKey = process.env.CLAVE_JWT ?? "no hay clave";
-            const tokenA = jwt.sign(UsuarioArevisar, secretKey, {
-                expiresIn: "30d",
-            });
-            const tokenEncriptado = encrypt(tokenA);
-            const token = tokenEncriptado;
-            res.json({ token });
-        } else {
-            res.json({ msg: "el usuario que ingresaste no existe Registrate" });
+        if (!codigo || !username || !edad || !password || !rol) {
+            res.status(400).json({ message: "Faltan datos en la solicitud" });
+            return;
         }
-    } else {
-        res.json({ msg: "Ingresa correctamente el usuario" });
+
+        if (!esRolDeRegistro(rol)) {
+            res.status(400).json({
+                message: "Rol no permitido. Usa estudiante o profesor",
+            });
+            return;
+        }
+
+        const codigoNormalizado = normalizarCodigo(String(codigo));
+        const usernameNormalizado = String(username).trim();
+        const edadNumero = Number(edad);
+
+        if (!esCodigoValido(codigoNormalizado)) {
+            res.status(400).json({
+                message:
+                    "El código debe ser alfanumérico de 4 a 20 caracteres",
+            });
+            return;
+        }
+
+        if (!usernameNormalizado) {
+            res.status(400).json({ message: "El nombre de usuario es obligatorio" });
+            return;
+        }
+
+        if (
+            !Number.isInteger(edadNumero) ||
+            edadNumero <= 0 ||
+            edadNumero > 120
+        ) {
+            res.status(400).json({ message: "Edad inválida" });
+            return;
+        }
+
+        if (String(password).length < 4) {
+            res.status(400).json({
+                message: "La contraseña debe tener al menos 4 caracteres",
+            });
+            return;
+        }
+
+        if (await existeCodigo(codigoNormalizado)) {
+            res.status(409).json({
+                message: `El código ${codigoNormalizado} ya está registrado`,
+            });
+            return;
+        }
+
+        if (await existeUsername(usernameNormalizado)) {
+            res.status(409).json({
+                message: `El usuario ${usernameNormalizado} ya está registrado`,
+            });
+            return;
+        }
+
+        const usuario = await crearUsuario({
+            codigo: codigoNormalizado,
+            username: usernameNormalizado,
+            edad: edadNumero,
+            password: String(password),
+            rol: rol as Rol,
+        });
+
+        res.status(201).json({ token: firmarToken(usuario) });
+    } catch (error: any) {
+        if (error?.name === "SequelizeUniqueConstraintError") {
+            res.status(409).json({
+                message: "El código o el usuario ya están registrados",
+            });
+            return;
+        }
+
+        console.error("ERROR RegistrarLogin:", error);
+        res.status(500).json({ message: "No se pudo registrar el usuario" });
+    }
+};
+
+const iniciarSesion = async (req: Request, res: Response) => {
+    try {
+        const { username, password } = req.body ?? {};
+        const identificador =
+            typeof username === "string" ? username.trim() : "";
+
+        if (!identificador || !password) {
+            res.status(400).json({ message: "Faltan datos en la solicitud" });
+            return;
+        }
+
+        const usuario = await buscarUsuarioPorIdentificador(identificador);
+
+        if (!usuario || usuario.password !== password) {
+            res.json({
+                msg: "el usuario que ingresaste no existe Registrate",
+            });
+            return;
+        }
+
+        res.json({ token: firmarToken(usuario) });
+    } catch (error: any) {
+        console.error("ERROR iniciarSesion:", error);
+        res.status(500).json({ message: "No se pudo iniciar sesión" });
     }
 };
 
 const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
-    // Usa la interfaz para tipar el resultado de findAll
-    const usuariosBD = await Usuarios.findAll({
-        attributes: ["username", "password"],
-        raw: true,
-    });
-
-    // Convierte explícitamente a unknown y luego a Usuario[]
-    const usuarios = usuariosBD as unknown as Usuario[];
-
-    const UsuarioALogear: Usuario = usuario;
-    console.log("El usuario que se va a logear es:");
-    console.log(UsuarioALogear);
-
-    let registro: boolean = false;
-
-    for (let i = 0; i < usuariosBD.length; i++) {
-        if (
-            usuarios[i].username === UsuarioALogear.username &&
-            usuarios[i].password === UsuarioALogear.password
-        ) {
-            registro = true;
-        }
-    }
-
-    return registro; // 🔁 esto hace internamente un `resolve(registro)`
+    const encontrado = await buscarUsuarioPorIdentificador(usuario.username);
+    return !!encontrado && encontrado.password === usuario.password;
 };
+
+/**
+ * @swagger
+ * /usuarios/me:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Perfil, rol y puntos del usuario autenticado
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Datos del usuario autenticado
+ *       401:
+ *         description: Token inválido
+ */
+const traerMiPerfil = async (req: RequestAutenticado, res: Response) => {
+    try {
+        const id = req.usuarioActual?.id;
+
+        if (!id) {
+            res.status(401).json({ message: "No autenticado" });
+            return;
+        }
+
+        const perfil = await obtenerPerfilCompleto(id);
+
+        if (!perfil) {
+            res.status(404).json({ message: "Usuario no encontrado" });
+            return;
+        }
+
+        res.json(perfil);
+    } catch (error: any) {
+        console.error("ERROR traerMiPerfil:", error);
+        res.status(500).json({ message: "No se pudo obtener el perfil" });
+    }
+};
+
 
 /**
  * @swagger
@@ -595,40 +748,58 @@ const traerJuegosCompletados = async (
  *         description: Error interno
  */
 const aumentarPuntuacion = async (
-    req: AuthenticatedRequest,
+    req: RequestAutenticado,
     res: Response,
 ): Promise<void> => {
     try {
         const { idjuego } = req.params;
+        const idJuego = Number(idjuego);
 
-        const nombre = req.DatosToken?.username!;
-        const password = req.DatosToken?.password!;
+        if (!Number.isInteger(idJuego)) {
+            res.status(400).json({ message: "Id de juego inválido" });
+            return;
+        }
 
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
-        const idUser = usuario.id;
+        let idUser = req.usuarioActual?.id;
+
+        if (!idUser) {
+            const nombre = req.DatosToken?.username!;
+            const password = req.DatosToken?.password!;
+            const usuario = await obtenerUnUsuarioServicio(nombre, password);
+            idUser = Number(usuario.id);
+        }
+
+        const ahora = new Date();
 
         let juego = await UsuarioJuegos.findOne({
             where: {
-                juego_id: Number(idjuego),
+                juego_id: idJuego,
                 usuario_id: Number(idUser),
             },
         });
 
         if (!juego) {
             juego = await UsuarioJuegos.create({
-                usuario_id: idUser,
-                juego_id: Number(idjuego),
+                usuario_id: Number(idUser),
+                juego_id: idJuego,
                 completado: true,
                 puntos: 10,
+                intentos: 1,
+                fecha_completado: ahora,
+                ultima_actividad: ahora,
             });
 
             res.status(201).json(juego);
             return;
         }
 
+        juego.intentos = Number(juego.intentos ?? 0) + 1;
+        juego.ultima_actividad = ahora;
+
         if (!juego.completado) {
             juego.completado = true;
             juego.puntos += 10;
+            juego.fecha_completado = ahora;
         } else {
             juego.puntos += 5;
         }
@@ -712,7 +883,9 @@ export {
     actualizar,
     borrar,
     RegistrarLogin,
+    iniciarSesion,
     verificarLogin,
+    traerMiPerfil,
     traerDatosUnUsuario,
     traerPuntuacion,
     traerJuegosCompletados,
