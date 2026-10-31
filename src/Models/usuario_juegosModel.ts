@@ -10,6 +10,7 @@ interface UsuariosJuegosAttributes {
     fecha_completado?: Date | null;
     ultima_actividad?: Date | null;
     intentos?: number;
+    estado_juego?: string | null;
 }
 
 export interface UsuariosJuegosInstance
@@ -46,6 +47,10 @@ const UsuarioJuegos = db.define<UsuariosJuegosInstance>(
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
+        },
+        estado_juego: {
+            type: DataTypes.TEXT("long"),
+            allowNull: true,
         },
     },
     {

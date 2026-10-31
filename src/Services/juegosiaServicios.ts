@@ -55,3 +55,29 @@ export const completarJuegoIA = async (
     await juego.save();
     return juego;
 };
+
+export const obtenerJuegoIAPorId = async (
+    usuario_id: number,
+    juego_id: number,
+): Promise<JuegosIAInstance | null> => {
+    const juego = await JuegosIA.findOne({
+        where: { id: juego_id, usuario_id },
+    });
+    return juego;
+};
+
+export const guardarEstadoTableroJuegoIA = async (
+    usuario_id: number,
+    juego_id: number,
+    estado_tablero: string,
+): Promise<JuegosIAInstance> => {
+    const juego = await JuegosIA.findOne({
+        where: { id: juego_id, usuario_id },
+    });
+    if (!juego) {
+        throw new Error("No se encontró el juego");
+    }
+    juego.estado_tablero = estado_tablero;
+    await juego.save();
+    return juego;
+};

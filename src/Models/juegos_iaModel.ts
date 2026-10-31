@@ -9,6 +9,7 @@ interface JuegosIAAttributes {
     usuario_id?: number;
     completado?: boolean;
     puntos?: number;
+    estado_tablero?: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -44,6 +45,10 @@ const JuegosIA = db.define<JuegosIAInstance>(
         puntos: {
             type: DataTypes.INTEGER,
             defaultValue: 0,
+        },
+        estado_tablero: {
+            type: DataTypes.TEXT("long"),
+            allowNull: true,
         },
     },
     {

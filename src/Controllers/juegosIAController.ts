@@ -5,8 +5,10 @@ import {
     obtenerTodosLosJuegosIA,
     guardarJuegoIA,
     obtenerTodosLosJuegosIAPseudo,
+    completarJuegoIA,
+    obtenerJuegoIAPorId,
+    guardarEstadoTableroJuegoIA,
 } from "../Services/juegosiaServicios";
-import { completarJuegoIA } from "../Services/juegosiaServicios";
 
 /**
  * @swagger
@@ -279,11 +281,142 @@ const obtenerGeminiKeyController = async (
     }
 };
 
+/**
+ * @swagger
+ * /juegos/ia/{id}:
+ *   get:
+ *     tags: [Juegos IA]
+ *     summary: Obtener un juego IA por ID con su estado del tablero
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del juego IA
+ *     responses:
+ *       200:
+ *         description: Datos del juego IA
+ *       400:
+ *         description: ID de juego inválido
+ *       404:
+ *         description: Juego no encontrado
+ *       500:
+ *         description: Error interno
+ */
+const obtenerJuegoIAController = async (
+    req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const nombre: string = req.DatosToken?.username;
+        const password: string = req.DatosToken?.password;
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario_id = usuario.id;
+
+        const juego_id = Number(req.params.id);
+        if (isNaN(juego_id)) {
+            res.status(400).json({ msg: "id de juego inválido" });
+            return;
+        }
+
+        const juego = await obtenerJuegoIAPorId(usuario_id, juego_id);
+        if (!juego) {
+            res.status(404).json({ msg: "Juego no encontrado" });
+            return;
+        }
+
+        res.json({ juego });
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
+
+/**
+ * @swagger
+ * /juegos/guardarTablero/{id}:
+ *   put:
+ *     tags: [Juegos IA]
+ *     summary: Guardar el progreso y estado del tablero de un juego IA
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del juego IA
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               estado_tablero:
+ *                 type: string
+ *                 description: JSON serializado con el estado del tablero
+ *     responses:
+ *       200:
+ *         description: Progreso del tablero guardado correctamente
+ *       400:
+ *         description: ID de juego inválido
+ *       404:
+ *         description: Juego no encontrado
+ *       500:
+ *         description: Error interno
+ */
+const guardarEstadoTableroController = async (
+    req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const nombre: string = req.DatosToken?.username;
+        const password: string = req.DatosToken?.password;
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario_id = usuario.id;
+
+        const juego_id = Number(req.params.id);
+        if (isNaN(juego_id)) {
+            res.status(400).json({ msg: "id de juego inválido" });
+            return;
+        }
+
+        const { estado_tablero } = req.body;
+        const estadoString =
+            typeof estado_tablero === "object"
+                ? JSON.stringify(estado_tablero)
+                : String(estado_tablero ?? "");
+
+        const juegoActualizado = await guardarEstadoTableroJuegoIA(
+            usuario_id,
+            juego_id,
+            estadoString,
+        );
+
+        res.json({
+            msg: "Progreso del tablero guardado correctamente",
+            juego: juegoActualizado,
+        });
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
+
 export {
     traerJuegosController,
     guardarJuegoIAController,
     completarJuegoController,
     traerJuegosControllerPseudo,
     obtenerGeminiKeyController,
+    obtenerJuegoIAController,
+    guardarEstadoTableroController,
 };
 
