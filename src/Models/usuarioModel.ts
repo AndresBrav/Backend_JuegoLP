@@ -4,6 +4,7 @@ import UsuarioJuegos from "./usuario_juegosModel";
 import Notificaciones from "./NotificacionesModel";
 import JuegosIA from "./juegos_iaModel";
 import UsuarioJuegosIA from "./usuario_juegosIAModel";
+import UsuarioEjerciciosGrupo from "./usuario_ejerciciosGrupoModel";
 import { Rol } from "../interfaces/Usuario";
 
 interface UsuariosAttributes {
@@ -99,6 +100,17 @@ Usuarios.hasMany(UsuarioJuegosIA, {
 UsuarioJuegosIA.belongsTo(Usuarios, {
     foreignKey: "usuario_id",
     targetKey: "id",
+});
+
+Usuarios.hasMany(UsuarioEjerciciosGrupo, {
+    foreignKey: "usuario_id",
+    sourceKey: "id",
+    as: "respuestasGrupos",
+});
+
+UsuarioEjerciciosGrupo.belongsTo(Usuarios, {
+    as: "estudiante",
+    foreignKey: "usuario_id",
 });
 
 export default Usuarios;

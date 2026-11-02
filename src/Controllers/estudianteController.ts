@@ -6,13 +6,20 @@ import {
     unirEstudiantePorCodigo,
 } from "../Services/grupoServices";
 import { reporteEstudiante } from "../Services/reporteServices";
+import {
+    listarEjerciciosEstudianteGrupo,
+    obtenerEjercicioEstudiante,
+    guardarEstadoEjercicioEstudiante,
+    completarEjercicioEstudiante,
+    estudiantePerteneceAGrupo,
+} from "../Services/ejerciciosGrupoServices";
 
 /**
  * @swagger
  * /estudiante/grupos/unirse:
  *   post:
  *     tags: [Estudiante]
- *     summary: Unirse a un grupo con el código del profesor
+ *     summary: Unirse a un grupo con el cÃ³digo del profesor
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -30,7 +37,7 @@ import { reporteEstudiante } from "../Services/reporteServices";
  *       201:
  *         description: Matriculado en el grupo
  *       404:
- *         description: Código inválido
+ *         description: CÃ³digo invÃ¡lido
  *       409:
  *         description: Ya perteneces a ese grupo
  */
@@ -42,7 +49,7 @@ export const unirseAGrupoController = async (
         const codigo = req.body?.codigo;
 
         if (typeof codigo !== "string" || codigo.trim().length === 0) {
-            res.status(400).json({ message: "El código del grupo es obligatorio" });
+            res.status(400).json({ message: "El cÃ³digo del grupo es obligatorio" });
             return;
         }
 
@@ -58,7 +65,7 @@ export const unirseAGrupoController = async (
         });
     } catch (error: any) {
         if (error.message === "CODIGO_INVALIDO") {
-            res.status(404).json({ message: "Código de grupo inválido" });
+            res.status(404).json({ message: "CÃ³digo de grupo invÃ¡lido" });
             return;
         }
 
@@ -125,7 +132,7 @@ export const salirDeGrupoController = async (
         const grupoId = Number(req.params.id);
 
         if (!Number.isInteger(grupoId)) {
-            res.status(400).json({ message: "Id de grupo inválido" });
+            res.status(400).json({ message: "Id de grupo invÃ¡lido" });
             return;
         }
 
@@ -148,7 +155,7 @@ export const salirDeGrupoController = async (
  * /estudiante/progreso:
  *   get:
  *     tags: [Estudiante]
- *     summary: Ver el progreso propio por ejercicio y por día
+ *     summary: Ver el progreso propio por ejercicio y por dÃ­a
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -171,5 +178,163 @@ export const miProgresoController = async (
     } catch (error: any) {
         console.error("ERROR miProgresoController:", error);
         res.status(500).json({ message: "No se pudo obtener tu progreso" });
+    }
+};
+
+export const listarEjerciciosGrupoEstudianteController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const estudianteId = req.usuarioActual!.id;
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const pertenece = await estudiantePerteneceAGrupo(grupoId, estudianteId);
+        if (!pertenece) {
+            res.status(403).json({ message: "No perteneces a este grupo" });
+            return;
+        }
+
+        const ejercicios = await listarEjerciciosEstudianteGrupo(
+            grupoId,
+            estudianteId,
+        );
+        res.json(ejercicios);
+    } catch (error: any) {
+        console.error("ERROR listarEjerciciosGrupoEstudianteController:", error);
+        res.status(500).json({ message: "No se pudieron obtener los ejercicios" });
+    }
+};
+
+export const obtenerEjercicioEstudianteController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const ejercicioId = Number(req.params.ejercicioId);
+        const estudianteId = req.usuarioActual!.id;
+
+        if (!Number.isInteger(grupoId) || !Number.isInteger(ejercicioId)) {
+            res.status(400).json({ message: "Parámetros inválidos" });
+            return;
+        }
+
+        const pertenece = await estudiantePerteneceAGrupo(grupoId, estudianteId);
+        if (!pertenece) {
+            res.status(403).json({ message: "No perteneces a este grupo" });
+            return;
+        }
+
+        const ejercicio = await obtenerEjercicioEstudiante(
+            grupoId,
+            ejercicioId,
+            estudianteId,
+        );
+
+        if (!ejercicio) {
+            res.status(404).json({ message: "Ejercicio no encontrado" });
+            return;
+        }
+
+        res.json(ejercicio);
+    } catch (error: any) {
+        console.error("ERROR obtenerEjercicioEstudianteController:", error);
+        res.status(500).json({ message: "No se pudo obtener el ejercicio" });
+    }
+};
+
+export const guardarEstadoEjercicioEstudianteController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const ejercicioId = Number(req.params.ejercicioId);
+        const estudianteId = req.usuarioActual!.id;
+        const { estado_tablero } = req.body;
+
+        if (!Number.isInteger(grupoId) || !Number.isInteger(ejercicioId)) {
+            res.status(400).json({ message: "Parámetros inválidos" });
+            return;
+        }
+
+        const pertenece = await estudiantePerteneceAGrupo(grupoId, estudianteId);
+        if (!pertenece) {
+            res.status(403).json({ message: "No perteneces a este grupo" });
+            return;
+        }
+
+        const estadoString =
+            estado_tablero === null
+                ? null
+                : typeof estado_tablero === "object"
+                  ? JSON.stringify(estado_tablero)
+                  : String(estado_tablero ?? "");
+
+        const respuesta = await guardarEstadoEjercicioEstudiante(
+            grupoId,
+            ejercicioId,
+            estudianteId,
+            estadoString,
+        );
+
+        res.json({
+            message: "Progreso guardado correctamente",
+            respuesta,
+        });
+    } catch (error: any) {
+        console.error("ERROR guardarEstadoEjercicioEstudianteController:", error);
+        res.status(500).json({ message: "No se pudo guardar el progreso" });
+    }
+};
+
+export const completarEjercicioEstudianteController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const ejercicioId = Number(req.params.ejercicioId);
+        const estudianteId = req.usuarioActual!.id;
+        const { estado_tablero } = req.body;
+
+        if (!Number.isInteger(grupoId) || !Number.isInteger(ejercicioId)) {
+            res.status(400).json({ message: "Parámetros inválidos" });
+            return;
+        }
+
+        const pertenece = await estudiantePerteneceAGrupo(grupoId, estudianteId);
+        if (!pertenece) {
+            res.status(403).json({ message: "No perteneces a este grupo" });
+            return;
+        }
+
+        const estadoString =
+            estado_tablero === null
+                ? null
+                : typeof estado_tablero === "object"
+                  ? JSON.stringify(estado_tablero)
+                  : String(estado_tablero ?? "");
+
+        const resultado = await completarEjercicioEstudiante(
+            grupoId,
+            ejercicioId,
+            estudianteId,
+            estadoString,
+        );
+
+        res.json({
+            message: "Ejercicio entregado correctamente",
+            resultado,
+        });
+    } catch (error: any) {
+        console.error("ERROR completarEjercicioEstudianteController:", error);
+        res.status(500).json({ message: "No se pudo entregar el ejercicio" });
     }
 };

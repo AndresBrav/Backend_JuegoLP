@@ -9,6 +9,12 @@ import {
     eliminarGrupoController,
     reporteGrupoController,
     reporteEstudianteController,
+    crearEjercicioGrupoController,
+    listarEjerciciosGrupoController,
+    editarEjercicioGrupoController,
+    eliminarEjercicioGrupoController,
+    listarSolucionesEjercicioController,
+    calificarEntregaController,
 } from "../Controllers/profesorController";
 
 const router: Router = express.Router();
@@ -21,5 +27,13 @@ router.get("/grupos/:id", obtenerGrupoController);
 router.delete("/grupos/:id", eliminarGrupoController);
 router.get("/grupos/:id/reporte", reporteGrupoController);
 router.get("/estudiantes/:id/reporte", reporteEstudianteController);
+
+// Ejercicios dentro del grupo
+router.get("/grupos/:id/ejercicios", listarEjerciciosGrupoController);
+router.post("/grupos/:id/ejercicios", crearEjercicioGrupoController);
+router.put("/ejercicios/:id", editarEjercicioGrupoController);
+router.delete("/ejercicios/:id", eliminarEjercicioGrupoController);
+router.get("/ejercicios/:id/soluciones", listarSolucionesEjercicioController);
+router.put("/ejercicios/:id/calificar/:estudianteId", calificarEntregaController);
 
 export default router;

@@ -2,6 +2,8 @@ import { Op } from "sequelize";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 import JuegosIA from "../Models/juegos_iaModel";
 import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
+import EjerciciosGrupo from "../Models/ejerciciosGrupoModel";
+import UsuarioEjerciciosGrupo from "../Models/usuario_ejerciciosGrupoModel";
 import Juegos from "../Models/juegoModel";
 import Usuarios from "../Models/usuarioModel";
 import GrupoEstudiante from "../Models/grupoEstudianteModel";
@@ -149,51 +151,85 @@ export const reporteGrupo = async (
         grupoId,
     )) as unknown as EstudianteBasico[];
 
-    const ids = estudiantes.map((e) => Number(e.id));
+    const idsEstudiantes = estudiantes.map((e) => Number(e.id));
 
-    const [progresos, juegosIA, totalFijos] = await Promise.all([
-        ids.length
-            ? UsuarioJuegos.findAll({
-                  where: { usuario_id: { [Op.in]: ids } },
-                  raw: true,
-              })
-            : Promise.resolve([]),
-        ids.length
-            ? UsuarioJuegosIA.findAll({
-                  where: { usuario_id: { [Op.in]: ids } },
-                  raw: true,
-              })
-            : Promise.resolve([]),
-        Juegos.count(),
-    ]);
+    // Obtener los ejercicios propios del grupo
+    const ejerciciosDelGrupo = await EjerciciosGrupo.findAll({
+        where: { grupo_id: grupoId },
+        attributes: ["id", "titulo", "puntos"],
+        raw: true,
+    });
 
-    const resumenEstudiantes = resumirEstudiantes(
-        estudiantes,
-        progresos as any[],
-        juegosIA as any[],
-        totalFijos,
-    );
+    const idsEjercicios = ejerciciosDelGrupo.map((ej) => Number(ej.id));
+    const totalEjerciciosGrupo = ejerciciosDelGrupo.length;
+
+    // Obtener las respuestas de los estudiantes en los ejercicios de este grupo
+    const respuestasGrupo = idsEjercicios.length && idsEstudiantes.length
+        ? await UsuarioEjerciciosGrupo.findAll({
+              where: {
+                  ejercicio_grupo_id: { [Op.in]: idsEjercicios },
+                  usuario_id: { [Op.in]: idsEstudiantes },
+              },
+              raw: true,
+          })
+        : [];
+
+    const resumenEstudiantes = estudiantes.map((estudiante) => {
+        const idEstudiante = Number(estudiante.id);
+        const propias = respuestasGrupo.filter(
+            (r) => Number(r.usuario_id) === idEstudiante,
+        );
+
+        const completados = propias.filter((r) =>
+            estaCompletado(r.completado),
+        ).length;
+
+        const puntos = sumar(propias.map((r) => r.puntos));
+
+        const fechas = propias
+            .filter((r) => estaCompletado(r.completado))
+            .map((r) => r.ultima_actividad ?? r.fecha_completado)
+            .filter(Boolean)
+            .map((f) => new Date(f as any).getTime())
+            .filter((t) => !Number.isNaN(t));
+
+        const ultimaActividad = fechas.length
+            ? new Date(Math.max(...fechas)).toISOString()
+            : null;
+
+        const progreso =
+            totalEjerciciosGrupo > 0
+                ? Number((completados / totalEjerciciosGrupo).toFixed(2))
+                : 0;
+
+        return {
+            id: idEstudiante,
+            codigo: estudiante.codigo,
+            username: estudiante.username,
+            puntos,
+            fijosCompletados: completados, // Mantenemos la propiedad por compatibilidad de interfaz
+            iaCompletados: 0,
+            fijosTotales: totalEjerciciosGrupo,
+            iaGenerados: 0,
+            ejerciciosGrupoCompletados: completados,
+            ejerciciosGrupoTotales: totalEjerciciosGrupo,
+            progreso,
+            ultimaActividad,
+        };
+    });
 
     const { inicio, fin, dias } = rangoFechas(desde, hasta);
 
     const series = estudiantes.map((estudiante) => {
-        const eventos = [
-            ...(progresos as any[])
-                .filter(
-                    (p) =>
-                        Number(p.usuario_id) === Number(estudiante.id) &&
-                        estaCompletado(p.completado) &&
-                        p.fecha_completado,
-                )
-                .map((p) => aDia(p.fecha_completado)),
-            ...(juegosIA as any[])
-                .filter(
-                    (j) =>
-                        Number(j.usuario_id) === Number(estudiante.id) &&
-                        estaCompletado(j.completado),
-                )
-                .map((j) => aDia(j.fecha_completado ?? j.ultima_actividad)),
-        ].filter(Boolean) as string[];
+        const idEstudiante = Number(estudiante.id);
+        const eventos = respuestasGrupo
+            .filter(
+                (r) =>
+                    Number(r.usuario_id) === idEstudiante &&
+                    estaCompletado(r.completado),
+            )
+            .map((r) => aDia(r.fecha_completado ?? r.ultima_actividad))
+            .filter(Boolean) as string[];
 
         let acumulado = 0;
 
@@ -203,33 +239,20 @@ export const reporteGrupo = async (
         });
 
         return {
-            estudiante_id: Number(estudiante.id),
+            estudiante_id: idEstudiante,
             codigo: estudiante.codigo,
             username: estudiante.username,
             acumulado: valores,
         };
     });
 
-    const completadosEnRango = [
-        ...(progresos as any[])
-            .filter(
-                (p) =>
-                    estaCompletado(p.completado) &&
-                    p.fecha_completado &&
-                    new Date(p.fecha_completado) >= inicio &&
-                    new Date(p.fecha_completado) <= fin,
-            )
-            .map((p) => p.fecha_completado),
-        ...(juegosIA as any[])
-            .filter(
-                (j) =>
-                    estaCompletado(j.completado) &&
-                    (j.fecha_completado ?? j.ultima_actividad) &&
-                    new Date(j.fecha_completado ?? j.ultima_actividad) >= inicio &&
-                    new Date(j.fecha_completado ?? j.ultima_actividad) <= fin,
-            )
-            .map((j) => j.fecha_completado ?? j.ultima_actividad),
-    ].length;
+    const completadosEnRango = respuestasGrupo.filter(
+        (r) =>
+            estaCompletado(r.completado) &&
+            (r.fecha_completado ?? r.ultima_actividad) &&
+            new Date(r.fecha_completado ?? r.ultima_actividad) >= inicio &&
+            new Date(r.fecha_completado ?? r.ultima_actividad) <= fin,
+    ).length;
 
     return {
         grupo: {

@@ -12,6 +12,17 @@ import {
     reporteEstudiante,
     reporteGrupo,
 } from "../Services/reporteServices";
+import {
+    crearEjercicioDeGrupo,
+    listarEjerciciosDeGrupo,
+    editarEjercicioDeGrupo,
+    eliminarEjercicioDeGrupo,
+    profesorEsDuenioDeGrupo,
+    obtenerEjercicioPorId,
+    listarSolucionesEjercicio,
+    calificarEntregaEstudiante,
+    esTipoEjercicioValido,
+} from "../Services/ejerciciosGrupoServices";
 
 const esAdmin = (req: RequestAutenticado): boolean =>
     req.usuarioActual?.rol === "admin";
@@ -39,7 +50,7 @@ const esAdmin = (req: RequestAutenticado): boolean =>
  *       201:
  *         description: Grupo creado
  *       400:
- *         description: Nombre inválido
+ *         description: Nombre invÃ¡lido
  *       403:
  *         description: Requiere rol profesor
  */
@@ -81,7 +92,7 @@ export const crearGrupoController = async (
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de grupos con número de estudiantes
+ *         description: Lista de grupos con nÃºmero de estudiantes
  */
 export const listarGruposController = async (
     req: RequestAutenticado,
@@ -126,7 +137,7 @@ export const obtenerGrupoController = async (
         const grupoId = Number(req.params.id);
 
         if (!Number.isInteger(grupoId)) {
-            res.status(400).json({ message: "Id de grupo inválido" });
+            res.status(400).json({ message: "Id de grupo invÃ¡lido" });
             return;
         }
 
@@ -185,7 +196,7 @@ export const eliminarGrupoController = async (
         const grupoId = Number(req.params.id);
 
         if (!Number.isInteger(grupoId)) {
-            res.status(400).json({ message: "Id de grupo inválido" });
+            res.status(400).json({ message: "Id de grupo invÃ¡lido" });
             return;
         }
 
@@ -214,7 +225,7 @@ const validarRango = (req: RequestAutenticado) => {
  * /profesor/grupos/{id}/reporte:
  *   get:
  *     tags: [Profesor]
- *     summary: Reporte del grupo con evolución diaria
+ *     summary: Reporte del grupo con evoluciÃ³n diaria
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -249,7 +260,7 @@ export const reporteGrupoController = async (
         const grupoId = Number(req.params.id);
 
         if (!Number.isInteger(grupoId)) {
-            res.status(400).json({ message: "Id de grupo inválido" });
+            res.status(400).json({ message: "Id de grupo invÃ¡lido" });
             return;
         }
 
@@ -291,7 +302,7 @@ export const reporteGrupoController = async (
  *           type: integer
  *     responses:
  *       200:
- *         description: Progreso por ejercicio y por día
+ *         description: Progreso por ejercicio y por dÃ­a
  *       403:
  *         description: El estudiante no pertenece a tus grupos
  *       404:
@@ -305,7 +316,7 @@ export const reporteEstudianteController = async (
         const estudianteId = Number(req.params.id);
 
         if (!Number.isInteger(estudianteId)) {
-            res.status(400).json({ message: "Id de estudiante inválido" });
+            res.status(400).json({ message: "Id de estudiante invÃ¡lido" });
             return;
         }
 
@@ -334,5 +345,251 @@ export const reporteEstudianteController = async (
     } catch (error: any) {
         console.error("ERROR reporteEstudianteController:", error);
         res.status(500).json({ message: "No se pudo generar el reporte" });
+    }
+};
+
+export const crearEjercicioGrupoController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const { titulo, enunciado, tipo, puntos } = req.body;
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(grupoId);
+        if (!grupo) {
+            res.status(404).json({ message: "Grupo no encontrado" });
+            return;
+        }
+
+        if (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id) {
+            res.status(403).json({ message: "No tienes acceso a este grupo" });
+            return;
+        }
+
+        if (!titulo || typeof titulo !== "string" || titulo.trim().length < 2) {
+            res.status(400).json({ message: "El título es requerido" });
+            return;
+        }
+
+        if (!enunciado || typeof enunciado !== "string" || enunciado.trim().length < 5) {
+            res.status(400).json({ message: "El enunciado es requerido" });
+            return;
+        }
+
+        if (!esTipoEjercicioValido(tipo)) {
+            res.status(400).json({ message: "Tipo debe ser 'diagrama' o 'pseudocodigo'" });
+            return;
+        }
+
+        const puntosNum = Number(puntos ?? 10);
+        if (isNaN(puntosNum) || puntosNum <= 0) {
+            res.status(400).json({ message: "Los puntos deben ser un número positivo" });
+            return;
+        }
+
+        const ejercicio = await crearEjercicioDeGrupo(
+            grupoId,
+            grupo.nombre,
+            {
+                titulo: titulo.trim(),
+                enunciado: enunciado.trim(),
+                tipo,
+                puntos: puntosNum,
+            },
+        );
+
+        res.status(201).json(ejercicio);
+    } catch (error: any) {
+        console.error("ERROR crearEjercicioGrupoController:", error);
+        res.status(500).json({ message: "No se pudo crear el ejercicio" });
+    }
+};
+
+export const listarEjerciciosGrupoController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(grupoId);
+        if (!grupo) {
+            res.status(404).json({ message: "Grupo no encontrado" });
+            return;
+        }
+
+        if (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id) {
+            res.status(403).json({ message: "No tienes acceso a este grupo" });
+            return;
+        }
+
+        const ejercicios = await listarEjerciciosDeGrupo(grupoId);
+        res.json(ejercicios);
+    } catch (error: any) {
+        console.error("ERROR listarEjerciciosGrupoController:", error);
+        res.status(500).json({ message: "No se pudieron listar los ejercicios" });
+    }
+};
+
+export const editarEjercicioGrupoController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const ejercicioId = Number(req.params.id);
+        const { titulo, enunciado, tipo, puntos } = req.body;
+
+        if (!Number.isInteger(ejercicioId)) {
+            res.status(400).json({ message: "Id de ejercicio inválido" });
+            return;
+        }
+
+        const ejercicio = await obtenerEjercicioPorId(ejercicioId);
+        if (!ejercicio) {
+            res.status(404).json({ message: "Ejercicio no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(ejercicio.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este ejercicio" });
+            return;
+        }
+
+        const ejercicioActualizado = await editarEjercicioDeGrupo(ejercicioId, {
+            titulo,
+            enunciado,
+            tipo,
+            puntos: puntos !== undefined ? Number(puntos) : undefined,
+        });
+
+        res.json(ejercicioActualizado);
+    } catch (error: any) {
+        console.error("ERROR editarEjercicioGrupoController:", error);
+        res.status(500).json({ message: "No se pudo actualizar el ejercicio" });
+    }
+};
+
+export const eliminarEjercicioGrupoController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const ejercicioId = Number(req.params.id);
+
+        if (!Number.isInteger(ejercicioId)) {
+            res.status(400).json({ message: "Id de ejercicio inválido" });
+            return;
+        }
+
+        const ejercicio = await obtenerEjercicioPorId(ejercicioId);
+        if (!ejercicio) {
+            res.status(404).json({ message: "Ejercicio no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(ejercicio.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este ejercicio" });
+            return;
+        }
+
+        await eliminarEjercicioDeGrupo(ejercicioId, Number(ejercicio.grupo_id));
+        res.status(204).send();
+    } catch (error: any) {
+        console.error("ERROR eliminarEjercicioGrupoController:", error);
+        res.status(500).json({ message: "No se pudo eliminar el ejercicio" });
+    }
+};
+
+export const listarSolucionesEjercicioController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const ejercicioId = Number(req.params.id);
+        const estudianteId = req.query.estudianteId ? Number(req.query.estudianteId) : null;
+
+        if (!Number.isInteger(ejercicioId)) {
+            res.status(400).json({ message: "Id de ejercicio inválido" });
+            return;
+        }
+
+        const ejercicio = await obtenerEjercicioPorId(ejercicioId);
+        if (!ejercicio) {
+            res.status(404).json({ message: "Ejercicio no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(ejercicio.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este ejercicio" });
+            return;
+        }
+
+        const data = await listarSolucionesEjercicio(ejercicioId, estudianteId);
+        res.json(data);
+    } catch (error: any) {
+        console.error("ERROR listarSolucionesEjercicioController:", error);
+        res.status(500).json({ message: "No se pudieron obtener las soluciones" });
+    }
+};
+
+export const calificarEntregaController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const ejercicioId = Number(req.params.id);
+        const estudianteId = Number(req.params.estudianteId);
+        const { puntos } = req.body;
+
+        if (!Number.isInteger(ejercicioId) || !Number.isInteger(estudianteId)) {
+            res.status(400).json({ message: "Parámetros inválidos" });
+            return;
+        }
+
+        const puntosNum = Number(puntos);
+        if (isNaN(puntosNum) || puntosNum < 0) {
+            res.status(400).json({ message: "La nota/puntos debe ser un número mayor o igual a 0" });
+            return;
+        }
+
+        const ejercicio = await obtenerEjercicioPorId(ejercicioId);
+        if (!ejercicio) {
+            res.status(404).json({ message: "Ejercicio no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(ejercicio.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este ejercicio" });
+            return;
+        }
+
+        const respuesta = await calificarEntregaEstudiante(
+            ejercicioId,
+            estudianteId,
+            puntosNum,
+        );
+
+        res.json({
+            message: "Calificación asignada correctamente",
+            respuesta,
+        });
+    } catch (error: any) {
+        console.error("ERROR calificarEntregaController:", error);
+        res.status(500).json({ message: "No se pudo asignar la calificación" });
     }
 };
