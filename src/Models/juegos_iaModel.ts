@@ -1,22 +1,21 @@
 import { DataTypes, Model } from "sequelize";
 import db from "../db/conexion";
+import UsuarioJuegosIA from "./usuario_juegosIAModel";
 
 // atributos
-interface JuegosIAAttributes {
+export interface JuegosIAAttributes {
     id?: number;
     descripcion?: string;
     tipo_juego?: string;
     usuario_id?: number;
-    completado?: boolean;
-    puntos?: number;
-    estado_tablero?: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
 
 // instancia
 export interface JuegosIAInstance
-    extends Model<JuegosIAAttributes>, JuegosIAAttributes {}
+    extends Model<JuegosIAAttributes>,
+        JuegosIAAttributes {}
 
 const JuegosIA = db.define<JuegosIAInstance>(
     "JuegosIA",
@@ -38,23 +37,21 @@ const JuegosIA = db.define<JuegosIAInstance>(
             type: DataTypes.INTEGER,
             allowNull: true,
         },
-        completado: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false,
-        },
-        puntos: {
-            type: DataTypes.INTEGER,
-            defaultValue: 0,
-        },
-        estado_tablero: {
-            type: DataTypes.TEXT("long"),
-            allowNull: true,
-        },
     },
     {
         tableName: "juegosia",
-        timestamps: true, // 👈 porque tu migration tiene createdAt y updatedAt
+        timestamps: true,
     },
 );
+
+JuegosIA.hasMany(UsuarioJuegosIA, {
+    foreignKey: "juego_ia_id",
+    sourceKey: "id",
+});
+
+UsuarioJuegosIA.belongsTo(JuegosIA, {
+    foreignKey: "juego_ia_id",
+    targetKey: "id",
+});
 
 export default JuegosIA;

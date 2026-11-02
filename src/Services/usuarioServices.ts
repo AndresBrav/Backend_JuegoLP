@@ -6,7 +6,7 @@ import { UsuarioActualizado } from "../interfaces/Usuario";
 import Avatares from "../Models/avatarModel";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
-import JuegosIA from "../Models/juegos_iaModel";
+import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
 
 import { isString, isNumero } from "../Validations/validaciones";
 
@@ -81,7 +81,7 @@ export const actualizarUsuario = async (
         throw new Error("Usuario no encontrado");
     }
 
-    // Verificar si los tres parámetros son undefined
+    // Verificar si los tres parÃ¡metros son undefined
     if (
         username === undefined &&
         edad === undefined &&
@@ -177,7 +177,7 @@ export const obtenerJuegosCompletadosUsuario = async (
 export const obtenerPuntuacionusuarioIA = async (
     idUser: number,
 ): Promise<number> => {
-    const puntosRaw = await JuegosIA.findAll({
+    const puntosRaw = await UsuarioJuegosIA.findAll({
         attributes: ["puntos"],
         where: { usuario_id: idUser },
         raw: true,
@@ -219,7 +219,7 @@ export const servicioActualizarFoto = async (
 };
 
 /* ------------------------------------------------------------------ */
-/* Autenticación, registro y perfil                                    */
+/* AutenticaciÃ³n, registro y perfil                                    */
 /* ------------------------------------------------------------------ */
 
 export const buscarUsuarioPorId = async (
@@ -228,7 +228,7 @@ export const buscarUsuarioPorId = async (
     return Usuarios.findByPk(id);
 };
 
-/** Permite iniciar sesión con el username o con el código institucional. */
+/** Permite iniciar sesiÃ³n con el username o con el cÃ³digo institucional. */
 export const buscarUsuarioPorIdentificador = async (
     identificador: string,
 ): Promise<UsuariosInstance | null> => {

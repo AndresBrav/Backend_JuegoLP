@@ -2,7 +2,7 @@ import Usuarios from "../Models/usuarioModel";
 import Grupo from "../Models/grupoModel";
 import GrupoEstudiante from "../Models/grupoEstudianteModel";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
-import JuegosIA from "../Models/juegos_iaModel";
+import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
 import { Rol } from "../interfaces/Usuario";
 import {
     crearUsuario,
@@ -126,7 +126,7 @@ export const listarEstudiantes = async () => {
             attributes: ["usuario_id", "puntos", "completado"],
             raw: true,
         }),
-        JuegosIA.findAll({
+        UsuarioJuegosIA.findAll({
             attributes: ["usuario_id", "puntos", "completado"],
             raw: true,
         }),

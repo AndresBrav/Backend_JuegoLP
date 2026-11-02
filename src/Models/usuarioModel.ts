@@ -3,6 +3,7 @@ import db from "../db/conexion";
 import UsuarioJuegos from "./usuario_juegosModel";
 import Notificaciones from "./NotificacionesModel";
 import JuegosIA from "./juegos_iaModel";
+import UsuarioJuegosIA from "./usuario_juegosIAModel";
 import { Rol } from "../interfaces/Usuario";
 
 interface UsuariosAttributes {
@@ -16,7 +17,8 @@ interface UsuariosAttributes {
 }
 
 export interface UsuariosInstance
-    extends Model<UsuariosAttributes>, UsuariosAttributes {}
+    extends Model<UsuariosAttributes>,
+        UsuariosAttributes {}
 
 const Usuarios = db.define<UsuariosInstance>(
     "Usuarios",
@@ -85,6 +87,16 @@ Usuarios.hasMany(JuegosIA, {
 });
 
 JuegosIA.belongsTo(Usuarios, {
+    foreignKey: "usuario_id",
+    targetKey: "id",
+});
+
+Usuarios.hasMany(UsuarioJuegosIA, {
+    foreignKey: "usuario_id",
+    sourceKey: "id",
+});
+
+UsuarioJuegosIA.belongsTo(Usuarios, {
     foreignKey: "usuario_id",
     targetKey: "id",
 });

@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 import JuegosIA from "../Models/juegos_iaModel";
+import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
 import Juegos from "../Models/juegoModel";
 import Usuarios from "../Models/usuarioModel";
 import GrupoEstudiante from "../Models/grupoEstudianteModel";
@@ -100,7 +101,7 @@ const resumirEstudiantes = (
                 .map((p) => p.ultima_actividad ?? p.fecha_completado),
             ...propiosIA
                 .filter((j) => estaCompletado(j.completado))
-                .map((j) => j.updatedAt ?? j.createdAt),
+                .map((j) => j.ultima_actividad ?? j.fecha_completado),
         ]
             .filter(Boolean)
             .map((f) => new Date(f as any).getTime())
@@ -158,7 +159,7 @@ export const reporteGrupo = async (
               })
             : Promise.resolve([]),
         ids.length
-            ? JuegosIA.findAll({
+            ? UsuarioJuegosIA.findAll({
                   where: { usuario_id: { [Op.in]: ids } },
                   raw: true,
               })
@@ -191,7 +192,7 @@ export const reporteGrupo = async (
                         Number(j.usuario_id) === Number(estudiante.id) &&
                         estaCompletado(j.completado),
                 )
-                .map((j) => aDia(j.updatedAt ?? j.createdAt)),
+                .map((j) => aDia(j.fecha_completado ?? j.ultima_actividad)),
         ].filter(Boolean) as string[];
 
         let acumulado = 0;
@@ -223,10 +224,11 @@ export const reporteGrupo = async (
             .filter(
                 (j) =>
                     estaCompletado(j.completado) &&
-                    new Date(j.updatedAt ?? j.createdAt) >= inicio &&
-                    new Date(j.updatedAt ?? j.createdAt) <= fin,
+                    (j.fecha_completado ?? j.ultima_actividad) &&
+                    new Date(j.fecha_completado ?? j.ultima_actividad) >= inicio &&
+                    new Date(j.fecha_completado ?? j.ultima_actividad) <= fin,
             )
-            .map((j) => j.updatedAt ?? j.createdAt),
+            .map((j) => j.fecha_completado ?? j.ultima_actividad),
     ].length;
 
     return {
@@ -272,7 +274,7 @@ export const reporteEstudiante = async (usuarioId: number) => {
         return null;
     }
 
-    const [juegos, progresos, juegosIA] = await Promise.all([
+    const [juegos, progresos, juegosIA, progresosIA] = await Promise.all([
         Juegos.findAll({
             attributes: ["id", "nombre_juego", "nivel_juego"],
             order: [["id", "ASC"]],
@@ -286,11 +288,20 @@ export const reporteEstudiante = async (usuarioId: number) => {
             where: { usuario_id: usuarioId },
             raw: true,
         }),
+        UsuarioJuegosIA.findAll({
+            where: { usuario_id: usuarioId },
+            raw: true,
+        }),
     ]);
 
     const progresoPorJuego = new Map<number, any>();
     (progresos as any[]).forEach((p) => {
         progresoPorJuego.set(Number(p.juego_id), p);
+    });
+
+    const progresoPorJuegoIA = new Map<number, any>();
+    (progresosIA as any[]).forEach((p) => {
+        progresoPorJuegoIA.set(Number(p.juego_ia_id), p);
     });
 
     const ejercicios = (juegos as any[]).map((juego) => {
@@ -314,16 +325,23 @@ export const reporteEstudiante = async (usuarioId: number) => {
         };
     });
 
-    const ia = (juegosIA as any[]).map((juego) => ({
-        id: Number(juego.id),
-        descripcion: juego.descripcion,
-        tipo: juego.tipo_juego,
-        completado: estaCompletado(juego.completado),
-        puntos: Number(juego.puntos ?? 0),
-        fecha_completado: estaCompletado(juego.completado)
-            ? new Date(juego.updatedAt ?? juego.createdAt).toISOString()
-            : null,
-    }));
+    const ia = (juegosIA as any[]).map((juego) => {
+        const prog = progresoPorJuegoIA.get(Number(juego.id));
+        const completado = prog ? estaCompletado(prog.completado) : false;
+        return {
+            id: Number(juego.id),
+            descripcion: juego.descripcion,
+            tipo: juego.tipo_juego,
+            completado,
+            puntos: prog ? Number(prog.puntos ?? 0) : 0,
+            fecha_completado:
+                completado && (prog?.fecha_completado ?? prog?.ultima_actividad)
+                    ? new Date(
+                          prog.fecha_completado ?? prog.ultima_actividad,
+                      ).toISOString()
+                    : null,
+        };
+    });
 
     const eventos = [
         ...(progresos as any[])
@@ -332,10 +350,14 @@ export const reporteEstudiante = async (usuarioId: number) => {
                 fecha: aDia(p.fecha_completado),
                 puntos: Number(p.puntos ?? 0),
             })),
-        ...(juegosIA as any[])
-            .filter((j) => estaCompletado(j.completado))
+        ...(progresosIA as any[])
+            .filter(
+                (j) =>
+                    estaCompletado(j.completado) &&
+                    (j.fecha_completado ?? j.ultima_actividad),
+            )
             .map((j) => ({
-                fecha: aDia(j.updatedAt ?? j.createdAt),
+                fecha: aDia(j.fecha_completado ?? j.ultima_actividad),
                 puntos: Number(j.puntos ?? 0),
             })),
     ].filter((evento) => evento.fecha) as { fecha: string; puntos: number }[];
@@ -413,11 +435,11 @@ export const estadisticasGlobales = async () => {
         Grupo.count(),
         GrupoEstudiante.count(),
         UsuarioJuegos.count({ where: { completado: true } }),
-        JuegosIA.count({ where: { completado: true } }),
+        UsuarioJuegosIA.count({ where: { completado: true } }),
         UsuarioJuegos.sum("puntos"),
-        JuegosIA.sum("puntos"),
+        UsuarioJuegosIA.sum("puntos"),
         UsuarioJuegos.max("ultima_actividad"),
-        JuegosIA.max("updatedAt"),
+        UsuarioJuegosIA.max("ultima_actividad"),
     ]);
 
     const totalGrupos = Number(grupos ?? 0);
