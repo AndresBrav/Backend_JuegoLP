@@ -12,6 +12,7 @@ import {
     guardarEstadoEjercicioEstudiante,
     completarEjercicioEstudiante,
     estudiantePerteneceAGrupo,
+    obtenerRankingGrupo,
 } from "../Services/ejerciciosGrupoServices";
 
 /**
@@ -336,5 +337,32 @@ export const completarEjercicioEstudianteController = async (
     } catch (error: any) {
         console.error("ERROR completarEjercicioEstudianteController:", error);
         res.status(500).json({ message: "No se pudo entregar el ejercicio" });
+    }
+};
+
+export const obtenerRankingGrupoEstudianteController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const estudianteId = req.usuarioActual!.id;
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "ID de grupo inválido" });
+            return;
+        }
+
+        const pertenece = await estudiantePerteneceAGrupo(grupoId, estudianteId);
+        if (!pertenece) {
+            res.status(403).json({ message: "No perteneces a este grupo" });
+            return;
+        }
+
+        const ranking = await obtenerRankingGrupo(grupoId);
+        res.json(ranking);
+    } catch (error: any) {
+        console.error("ERROR obtenerRankingGrupoEstudianteController:", error);
+        res.status(500).json({ message: "Error al obtener el ranking del grupo" });
     }
 };

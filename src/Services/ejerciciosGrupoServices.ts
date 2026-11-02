@@ -313,8 +313,8 @@ export const guardarEstadoEjercicioEstudiante = async (
 };
 
 /**
- * Marca el ejercicio como completado y otorga puntos la primera vez.
- * Si ya estaba completado, solo actualiza la solución entregada.
+ * Marca el ejercicio como completado sin asignar puntos automáticos
+ * (el profesor califica después).
  */
 export const completarEjercicioEstudiante = async (
     grupoId: number,
@@ -507,4 +507,70 @@ export const calificarEntregaEstudiante = async (
     }
 
     return respuesta;
+};
+
+/** Obtiene el ranking de mejores notas de los estudiantes pertenecientes a un grupo. */
+export const obtenerRankingGrupo = async (grupoId: number) => {
+    const matriculas = await GrupoEstudiante.findAll({
+        where: { grupo_id: grupoId },
+        attributes: ["estudiante_id"],
+        raw: true,
+    });
+
+    const idsEstudiantes = matriculas.map((m) => Number(m.estudiante_id));
+    if (idsEstudiantes.length === 0) {
+        return [];
+    }
+
+    const estudiantes = await Usuarios.findAll({
+        where: { id: { [Op.in]: idsEstudiantes }, rol: "estudiante" },
+        attributes: ["id", "codigo", "username"],
+        raw: true,
+    });
+
+    if (estudiantes.length === 0) {
+        return [];
+    }
+
+    const ejercicios = await EjerciciosGrupo.findAll({
+        where: { grupo_id: grupoId },
+        attributes: ["id"],
+        raw: true,
+    });
+
+    const idsEjercicios = ejercicios.map((e) => Number(e.id));
+
+    const respuestas = idsEjercicios.length
+        ? await UsuarioEjerciciosGrupo.findAll({
+              where: {
+                  ejercicio_grupo_id: { [Op.in]: idsEjercicios },
+                  usuario_id: { [Op.in]: idsEstudiantes },
+              },
+              raw: true,
+          })
+        : [];
+
+    const ranking = estudiantes.map((est) => {
+        const misRespuestas = respuestas.filter(
+            (r) => Number(r.usuario_id) === Number(est.id),
+        );
+        const puntosTotales = misRespuestas.reduce(
+            (acc, r) => acc + Number(r.puntos ?? 0),
+            0,
+        );
+        const completados = misRespuestas.filter((r) => r.completado).length;
+
+        return {
+            id: Number(est.id),
+            codigo: est.codigo,
+            username: est.username,
+            puntosTotales,
+            completados,
+            totalEjercicios: idsEjercicios.length,
+        };
+    });
+
+    ranking.sort((a, b) => b.puntosTotales - a.puntosTotales || b.completados - a.completados);
+
+    return ranking;
 };

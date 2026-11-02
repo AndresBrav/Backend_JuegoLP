@@ -15,6 +15,7 @@ import {
     eliminarEjercicioGrupoController,
     listarSolucionesEjercicioController,
     calificarEntregaController,
+    obtenerRankingGrupoProfesorController,
 } from "../Controllers/profesorController";
 
 const router: Router = express.Router();
@@ -26,6 +27,7 @@ router.get("/grupos", listarGruposController);
 router.get("/grupos/:id", obtenerGrupoController);
 router.delete("/grupos/:id", eliminarGrupoController);
 router.get("/grupos/:id/reporte", reporteGrupoController);
+router.get("/grupos/:id/ranking", obtenerRankingGrupoProfesorController);
 router.get("/estudiantes/:id/reporte", reporteEstudianteController);
 
 // Ejercicios dentro del grupo

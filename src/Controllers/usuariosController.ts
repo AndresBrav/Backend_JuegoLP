@@ -658,6 +658,18 @@ const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
     // console.log("desde aqui es el usuario");
     const idUser = resultado.id;
 
+    const tipo = (req.query.tipo || req.query.seccion || "total") as string;
+    if (tipo === "fijos" || tipo === "ejercicios") {
+        const puntuacion = await obtenerPuntuacionUsuario(idUser);
+        res.json({ puntuacionTotal: puntuacion });
+        return;
+    }
+    if (tipo === "ia" || tipo === "ejercicios-ia") {
+        const puntuacionIA = await obtenerPuntuacionusuarioIA(idUser);
+        res.json({ puntuacionTotal: puntuacionIA });
+        return;
+    }
+
     const puntuacion = await obtenerPuntuacionUsuario(idUser); //obtener los puntos del usuario
 
     const puntuacionIA = await obtenerPuntuacionusuarioIA(idUser); //obtener los puntos del usuario en juegos IA

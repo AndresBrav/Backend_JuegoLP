@@ -22,6 +22,7 @@ import {
     listarSolucionesEjercicio,
     calificarEntregaEstudiante,
     esTipoEjercicioValido,
+    obtenerRankingGrupo,
 } from "../Services/ejerciciosGrupoServices";
 
 const esAdmin = (req: RequestAutenticado): boolean =>
@@ -591,5 +592,30 @@ export const calificarEntregaController = async (
     } catch (error: any) {
         console.error("ERROR calificarEntregaController:", error);
         res.status(500).json({ message: "No se pudo asignar la calificación" });
+    }
+};
+
+export const obtenerRankingGrupoProfesorController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "ID de grupo inválido" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(grupoId);
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este grupo" });
+            return;
+        }
+
+        const ranking = await obtenerRankingGrupo(grupoId);
+        res.json(ranking);
+    } catch (error: any) {
+        console.error("ERROR obtenerRankingGrupoProfesorController:", error);
+        res.status(500).json({ message: "Error al obtener el ranking del grupo" });
     }
 };

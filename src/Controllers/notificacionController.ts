@@ -145,16 +145,28 @@ const obtenerUsuarioYPuntuacion = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const usuarios = await obtenerTodosLosUsuarios();
+        const tipo = (req.query.tipo || req.query.seccion || "total") as string;
+        const todosLosUsuarios = await obtenerTodosLosUsuarios();
+        const usuarios = todosLosUsuarios.filter((u: any) => u.rol !== "admin");
 
         const usuariosConPuntos = await Promise.all(
             usuarios.map(async (u) => {
                 const idUser = u.id;
-                const puntuacion = await obtenerPuntuacionUsuario(idUser);
-                const puntuacionIA = await obtenerPuntuacionusuarioIA(idUser);
+                let puntuacionTotal = 0;
+                if (tipo === "fijos" || tipo === "ejercicios") {
+                    puntuacionTotal = await obtenerPuntuacionUsuario(idUser);
+                } else if (tipo === "ia" || tipo === "ejercicios-ia") {
+                    puntuacionTotal = await obtenerPuntuacionusuarioIA(idUser);
+                } else {
+                    const puntuacion = await obtenerPuntuacionUsuario(idUser);
+    
+                    const puntuacionIA = await obtenerPuntuacionusuarioIA(idUser);
+                    puntuacionTotal = puntuacion + puntuacionIA;
+                }
+
                 return {
                     username: u.username,
-                    puntuacionTotal: puntuacion + puntuacionIA,
+                    puntuacionTotal,
                 };
             }),
         );
