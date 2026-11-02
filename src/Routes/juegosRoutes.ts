@@ -14,6 +14,7 @@ import {
     obtenerGeminiKeyController,
     obtenerJuegoIAController,
     guardarEstadoTableroController,
+    reiniciarEstadoTableroController,
 } from "../Controllers/juegosIAController";
 
 const router = express.Router();
@@ -40,6 +41,9 @@ router.post("/guardarjuegoIA", verifyToken, guardarJuegoIAController);
 
 // guardar estado / progreso del tablero de IA
 router.put("/guardarTablero/:id", verifyToken, guardarEstadoTableroController);
+
+// restablecer estado del tablero de IA a null
+router.put("/reiniciarTablero/:id", verifyToken, reiniciarEstadoTableroController);
 
 // marcar juego como completado e incrementar puntos
 router.put("/completar/:id", verifyToken, completarJuegoController);

@@ -69,7 +69,7 @@ export const obtenerJuegoIAPorId = async (
 export const guardarEstadoTableroJuegoIA = async (
     usuario_id: number,
     juego_id: number,
-    estado_tablero: string,
+    estado_tablero: string | null,
 ): Promise<JuegosIAInstance> => {
     const juego = await JuegosIA.findOne({
         where: { id: juego_id, usuario_id },
@@ -78,6 +78,21 @@ export const guardarEstadoTableroJuegoIA = async (
         throw new Error("No se encontró el juego");
     }
     juego.estado_tablero = estado_tablero;
+    await juego.save();
+    return juego;
+};
+
+export const reiniciarEstadoTableroJuegoIA = async (
+    usuario_id: number,
+    juego_id: number,
+): Promise<JuegosIAInstance> => {
+    const juego = await JuegosIA.findOne({
+        where: { id: juego_id, usuario_id },
+    });
+    if (!juego) {
+        throw new Error("No se encontró el juego");
+    }
+    juego.estado_tablero = null;
     await juego.save();
     return juego;
 };

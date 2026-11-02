@@ -8,6 +8,7 @@ import {
     completarJuegoIA,
     obtenerJuegoIAPorId,
     guardarEstadoTableroJuegoIA,
+    reiniciarEstadoTableroJuegoIA,
 } from "../Services/juegosiaServicios";
 
 /**
@@ -33,7 +34,7 @@ import {
  *                 msg:
  *                   type: string
  *       401:
- *         description: Token no válido
+ *         description: Token no valido
  *       403:
  *         description: Acceso denegado (sin token)
  *       500:
@@ -85,7 +86,7 @@ const traerJuegosController = async (
  *                 msg:
  *                   type: string
  *       401:
- *         description: Token no válido
+ *         description: Token no valido
  *       403:
  *         description: Acceso denegado (sin token)
  *       500:
@@ -157,7 +158,7 @@ const traerJuegosControllerPseudo = async (
  *       400:
  *         description: descripcion y tipo_juego son requeridos
  *       401:
- *         description: Token no válido
+ *         description: Token no valido
  *       403:
  *         description: Acceso denegado (sin token)
  *       500:
@@ -230,9 +231,9 @@ const guardarJuegoIAController = async (
  *                 juego:
  *                   $ref: '#/components/schemas/JuegosIA'
  *       400:
- *         description: id de juego inválido
+ *         description: id de juego invalido
  *       401:
- *         description: Token no válido
+ *         description: Token no valido
  *       403:
  *         description: Acceso denegado (sin token)
  *       500:
@@ -250,7 +251,7 @@ const completarJuegoController = async (
 
         const juego_id = Number(req.params.id);
         if (isNaN(juego_id)) {
-            res.status(400).json({ msg: "id de juego inválido" });
+            res.status(400).json({ msg: "id de juego invalido" });
             return;
         }
 
@@ -300,7 +301,7 @@ const obtenerGeminiKeyController = async (
  *       200:
  *         description: Datos del juego IA
  *       400:
- *         description: ID de juego inválido
+ *         description: ID de juego invalido
  *       404:
  *         description: Juego no encontrado
  *       500:
@@ -318,7 +319,7 @@ const obtenerJuegoIAController = async (
 
         const juego_id = Number(req.params.id);
         if (isNaN(juego_id)) {
-            res.status(400).json({ msg: "id de juego inválido" });
+            res.status(400).json({ msg: "id de juego invalido" });
             return;
         }
 
@@ -365,7 +366,7 @@ const obtenerJuegoIAController = async (
  *       200:
  *         description: Progreso del tablero guardado correctamente
  *       400:
- *         description: ID de juego inválido
+ *         description: ID de juego invalido
  *       404:
  *         description: Juego no encontrado
  *       500:
@@ -383,15 +384,17 @@ const guardarEstadoTableroController = async (
 
         const juego_id = Number(req.params.id);
         if (isNaN(juego_id)) {
-            res.status(400).json({ msg: "id de juego inválido" });
+            res.status(400).json({ msg: "id de juego invalido" });
             return;
         }
 
         const { estado_tablero } = req.body;
         const estadoString =
-            typeof estado_tablero === "object"
-                ? JSON.stringify(estado_tablero)
-                : String(estado_tablero ?? "");
+            estado_tablero === null
+                ? null
+                : typeof estado_tablero === "object"
+                  ? JSON.stringify(estado_tablero)
+                  : String(estado_tablero ?? "");
 
         const juegoActualizado = await guardarEstadoTableroJuegoIA(
             usuario_id,
@@ -410,6 +413,63 @@ const guardarEstadoTableroController = async (
     }
 };
 
+/**
+ * @swagger
+ * /juegos/reiniciarTablero/{id}:
+ *   put:
+ *     tags: [Juegos IA]
+ *     summary: Restablecer el estado del tablero de un juego IA a su inicio
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del juego IA
+ *     responses:
+ *       200:
+ *         description: Tablero del juego IA reiniciado correctamente
+ *       400:
+ *         description: ID de juego inválido
+ *       404:
+ *         description: Juego no encontrado
+ *       500:
+ *         description: Error interno
+ */
+const reiniciarEstadoTableroController = async (
+    req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const nombre: string = req.DatosToken?.username;
+        const password: string = req.DatosToken?.password;
+        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario_id = usuario.id;
+
+        const juego_id = Number(req.params.id);
+        if (isNaN(juego_id)) {
+            res.status(400).json({ msg: "id de juego inválido" });
+            return;
+        }
+
+        const juegoActualizado = await reiniciarEstadoTableroJuegoIA(
+            usuario_id,
+            juego_id,
+        );
+
+        res.json({
+            msg: "Estado del tablero reiniciado correctamente",
+            juego: juegoActualizado,
+        });
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
+
 export {
     traerJuegosController,
     guardarJuegoIAController,
@@ -418,5 +478,5 @@ export {
     obtenerGeminiKeyController,
     obtenerJuegoIAController,
     guardarEstadoTableroController,
+    reiniciarEstadoTableroController,
 };
-
