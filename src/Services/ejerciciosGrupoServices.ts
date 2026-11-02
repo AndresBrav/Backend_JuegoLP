@@ -339,14 +339,14 @@ export const completarEjercicioEstudiante = async (
     respuesta.fecha_completado = new Date();
 
     if (!yaEstabaCompletado) {
-        respuesta.puntos = Number(ejercicio.puntos ?? 10);
+        // No asignar puntos al entregar; el profesor califica después.
     }
 
     await respuesta.save();
 
     return {
         yaEstabaCompletado,
-        puntosOtorgados: yaEstabaCompletado ? 0 : Number(ejercicio.puntos ?? 10),
+        puntosOtorgados: 0,
         respuesta,
     };
 };
