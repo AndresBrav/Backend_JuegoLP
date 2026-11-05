@@ -14,6 +14,7 @@ import {
     estudiantePerteneceAGrupo,
     obtenerRankingGrupo,
 } from "../Services/ejerciciosGrupoServices";
+import { listarTemariosDeGrupo } from "../Services/temariosGrupoServices";
 
 /**
  * @swagger
@@ -364,5 +365,52 @@ export const obtenerRankingGrupoEstudianteController = async (
     } catch (error: any) {
         console.error("ERROR obtenerRankingGrupoEstudianteController:", error);
         res.status(500).json({ message: "Error al obtener el ranking del grupo" });
+    }
+};
+
+/**
+ * @swagger
+ * /estudiante/grupos/{id}/temarios:
+ *   get:
+ *     tags: [Estudiante]
+ *     summary: Listar los temarios del grupo con su progreso propio
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de temarios
+ *       403:
+ *         description: No perteneces a este grupo
+ */
+export const listarTemariosGrupoEstudianteController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const estudianteId = req.usuarioActual!.id;
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const pertenece = await estudiantePerteneceAGrupo(grupoId, estudianteId);
+        if (!pertenece) {
+            res.status(403).json({ message: "No perteneces a este grupo" });
+            return;
+        }
+
+        const temarios = await listarTemariosDeGrupo(grupoId, estudianteId);
+        res.json(temarios);
+    } catch (error: any) {
+        console.error("ERROR listarTemariosGrupoEstudianteController:", error);
+        res.status(500).json({ message: "No se pudieron obtener los temarios" });
     }
 };

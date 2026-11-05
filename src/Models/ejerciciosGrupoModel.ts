@@ -2,10 +2,12 @@ import { DataTypes, Model } from "sequelize";
 import db from "../db/conexion";
 import Grupo from "./grupoModel";
 import UsuarioEjerciciosGrupo from "./usuario_ejerciciosGrupoModel";
+import TemariosGrupo from "./temariosGrupoModel";
 
 export interface EjerciciosGrupoAttributes {
     id?: number;
     grupo_id?: number;
+    temario_id?: number;
     titulo?: string;
     enunciado?: string;
     tipo?: string;
@@ -27,6 +29,10 @@ const EjerciciosGrupo = db.define<EjerciciosGrupoInstance>(
             primaryKey: true,
         },
         grupo_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        temario_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
@@ -58,6 +64,11 @@ const EjerciciosGrupo = db.define<EjerciciosGrupoInstance>(
 EjerciciosGrupo.belongsTo(Grupo, {
     as: "grupo",
     foreignKey: "grupo_id",
+});
+
+EjerciciosGrupo.belongsTo(TemariosGrupo, {
+    as: "temario",
+    foreignKey: "temario_id",
 });
 
 Grupo.hasMany(EjerciciosGrupo, {

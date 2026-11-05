@@ -24,6 +24,14 @@ import {
     esTipoEjercicioValido,
     obtenerRankingGrupo,
 } from "../Services/ejerciciosGrupoServices";
+import {
+    listarTemariosDeGrupo,
+    crearTemarioDeGrupo,
+    editarTemarioDeGrupo,
+    eliminarTemarioDeGrupo,
+    reordenarTemariosDeGrupo,
+    obtenerTemarioPorId,
+} from "../Services/temariosGrupoServices";
 
 const esAdmin = (req: RequestAutenticado): boolean =>
     req.usuarioActual?.rol === "admin";
@@ -358,7 +366,7 @@ export const crearEjercicioGrupoController = async (
 ): Promise<void> => {
     try {
         const grupoId = Number(req.params.id);
-        const { titulo, enunciado, tipo, puntos } = req.body;
+        const { titulo, enunciado, tipo, puntos, temario_id } = req.body;
 
         if (!Number.isInteger(grupoId)) {
             res.status(400).json({ message: "Id de grupo inválido" });
@@ -397,6 +405,19 @@ export const crearEjercicioGrupoController = async (
             return;
         }
 
+        // Todo ejercicio pertenece a un temario del grupo
+        const temarioId = Number(temario_id);
+        if (!Number.isInteger(temarioId)) {
+            res.status(400).json({ message: "Debes elegir un temario para el ejercicio" });
+            return;
+        }
+
+        const temario = await obtenerTemarioPorId(temarioId);
+        if (!temario || Number(temario.grupo_id) !== grupoId) {
+            res.status(400).json({ message: "El temario no pertenece a este grupo" });
+            return;
+        }
+
         const ejercicio = await crearEjercicioDeGrupo(
             grupoId,
             grupo.nombre,
@@ -405,6 +426,7 @@ export const crearEjercicioGrupoController = async (
                 enunciado: enunciado.trim(),
                 tipo,
                 puntos: puntosNum,
+                temario_id: temarioId,
             },
         );
 
@@ -620,5 +642,350 @@ export const obtenerRankingGrupoProfesorController = async (
     } catch (error: any) {
         console.error("ERROR obtenerRankingGrupoProfesorController:", error);
         res.status(500).json({ message: "Error al obtener el ranking del grupo" });
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/grupos/{id}/temarios:
+ *   get:
+ *     tags: [Profesor]
+ *     summary: Listar los temarios de un grupo con cantidad de ejercicios
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de temarios
+ *       403:
+ *         description: No tienes acceso a este grupo
+ */
+export const listarTemariosGrupoController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(grupoId);
+        if (!grupo) {
+            res.status(404).json({ message: "Grupo no encontrado" });
+            return;
+        }
+
+        if (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id) {
+            res.status(403).json({ message: "No tienes acceso a este grupo" });
+            return;
+        }
+
+        const temarios = await listarTemariosDeGrupo(grupoId);
+        res.json(temarios);
+    } catch (error: any) {
+        console.error("ERROR listarTemariosGrupoController:", error);
+        res.status(500).json({ message: "No se pudieron listar los temarios" });
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/grupos/{id}/temarios:
+ *   post:
+ *     tags: [Profesor]
+ *     summary: Crear un temario en el grupo
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nombre]
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *                 example: "Condicionales"
+ *               descripcion:
+ *                 type: string
+ *                 nullable: true
+ *     responses:
+ *       201:
+ *         description: Temario creado
+ *       400:
+ *         description: Datos inválidos o nombre repetido
+ */
+export const crearTemarioGrupoController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const { nombre, descripcion } = req.body;
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(grupoId);
+        if (!grupo) {
+            res.status(404).json({ message: "Grupo no encontrado" });
+            return;
+        }
+
+        if (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id) {
+            res.status(403).json({ message: "No tienes acceso a este grupo" });
+            return;
+        }
+
+        if (
+            !nombre ||
+            typeof nombre !== "string" ||
+            nombre.trim().length < 2 ||
+            nombre.trim().length > 80
+        ) {
+            res.status(400).json({
+                message: "El nombre del temario debe tener entre 2 y 80 caracteres",
+            });
+            return;
+        }
+
+        const temario = await crearTemarioDeGrupo(grupoId, {
+            nombre: nombre.trim(),
+            descripcion:
+                typeof descripcion === "string" ? descripcion.trim() : null,
+        });
+
+        res.status(201).json(temario);
+    } catch (error: any) {
+        if (error.message === "NOMBRE_REPETIDO") {
+            res.status(400).json({ message: "Ya existe un temario con ese nombre en el grupo" });
+            return;
+        }
+        console.error("ERROR crearTemarioGrupoController:", error);
+        res.status(500).json({ message: "No se pudo crear el temario" });
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/temarios/{id}:
+ *   put:
+ *     tags: [Profesor]
+ *     summary: Editar un temario (nombre, descripción u orden)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Temario actualizado
+ *       403/404:
+ *         description: Sin acceso o no encontrado
+ */
+export const editarTemarioController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const temarioId = Number(req.params.id);
+        const { nombre, descripcion, orden } = req.body;
+
+        if (!Number.isInteger(temarioId)) {
+            res.status(400).json({ message: "Id de temario inválido" });
+            return;
+        }
+
+        const temario = await obtenerTemarioPorId(temarioId);
+        if (!temario) {
+            res.status(404).json({ message: "Temario no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(temario.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este temario" });
+            return;
+        }
+
+        if (
+            nombre !== undefined &&
+            (typeof nombre !== "string" ||
+                nombre.trim().length < 2 ||
+                nombre.trim().length > 80)
+        ) {
+            res.status(400).json({
+                message: "El nombre del temario debe tener entre 2 y 80 caracteres",
+            });
+            return;
+        }
+
+        const actualizado = await editarTemarioDeGrupo(temarioId, {
+            nombre:
+                typeof nombre === "string" ? nombre.trim() : undefined,
+            descripcion:
+                typeof descripcion === "string" ? descripcion.trim() : undefined,
+            orden: orden !== undefined ? Number(orden) : undefined,
+        });
+
+        res.json(actualizado);
+    } catch (error: any) {
+        if (error.message === "NOMBRE_REPETIDO") {
+            res.status(400).json({ message: "Ya existe un temario con ese nombre en el grupo" });
+            return;
+        }
+        console.error("ERROR editarTemarioController:", error);
+        res.status(500).json({ message: "No se pudo editar el temario" });
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/temarios/{id}:
+ *   delete:
+ *     tags: [Profesor]
+ *     summary: Eliminar un temario (solo si está vacío)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Temario eliminado
+ *       400:
+ *         description: El temario tiene ejercicios
+ *       403/404:
+ *         description: Sin acceso o no encontrado
+ */
+export const eliminarTemarioController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const temarioId = Number(req.params.id);
+
+        if (!Number.isInteger(temarioId)) {
+            res.status(400).json({ message: "Id de temario inválido" });
+            return;
+        }
+
+        const temario = await obtenerTemarioPorId(temarioId);
+        if (!temario) {
+            res.status(404).json({ message: "Temario no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(temario.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este temario" });
+            return;
+        }
+
+        await eliminarTemarioDeGrupo(temarioId);
+        res.json({ message: "Temario eliminado" });
+    } catch (error: any) {
+        if (error.message === "TEMARIO_CON_EJERCICIOS") {
+            res.status(400).json({
+                message:
+                    "El temario tiene ejercicios: muévelos o elimínalos antes de borrarlo",
+            });
+            return;
+        }
+        console.error("ERROR eliminarTemarioController:", error);
+        res.status(500).json({ message: "No se pudo eliminar el temario" });
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/grupos/{id}/temarios/reordenar:
+ *   put:
+ *     tags: [Profesor]
+ *     summary: Reordenar los temarios del grupo (lista de ids)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [orden]
+ *             properties:
+ *               orden:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: Temarios reordenados
+ */
+export const reordenarTemariosController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupoId = Number(req.params.id);
+        const orden = req.body?.orden;
+
+        if (!Number.isInteger(grupoId)) {
+            res.status(400).json({ message: "Id de grupo inválido" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(grupoId);
+        if (!grupo) {
+            res.status(404).json({ message: "Grupo no encontrado" });
+            return;
+        }
+
+        if (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id) {
+            res.status(403).json({ message: "No tienes acceso a este grupo" });
+            return;
+        }
+
+        if (
+            !Array.isArray(orden) ||
+            orden.some((item) => !Number.isInteger(Number(item)))
+        ) {
+            res.status(400).json({ message: "La lista de orden es inválida" });
+            return;
+        }
+
+        await reordenarTemariosDeGrupo(orden.map(Number));
+        res.json({ message: "Temarios reordenados" });
+    } catch (error: any) {
+        console.error("ERROR reordenarTemariosController:", error);
+        res.status(500).json({ message: "No se pudo reordenar los temarios" });
     }
 };

@@ -12,6 +12,7 @@ import {
     guardarEstadoEjercicioEstudianteController,
     completarEjercicioEstudianteController,
     obtenerRankingGrupoEstudianteController,
+    listarTemariosGrupoEstudianteController,
 } from "../Controllers/estudianteController";
 
 const router: Router = express.Router();
@@ -25,6 +26,7 @@ router.get("/progreso", miProgresoController);
 
 // Ejercicios de grupos para estudiantes
 router.get("/grupos/:id/ejercicios", listarEjerciciosGrupoEstudianteController);
+router.get("/grupos/:id/temarios", listarTemariosGrupoEstudianteController);
 router.get("/grupos/:id/ranking", obtenerRankingGrupoEstudianteController);
 router.get("/grupos/:id/ejercicios/:ejercicioId", obtenerEjercicioEstudianteController);
 router.put("/grupos/:id/ejercicios/:ejercicioId/estado", guardarEstadoEjercicioEstudianteController);

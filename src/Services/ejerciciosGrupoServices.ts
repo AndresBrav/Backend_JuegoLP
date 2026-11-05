@@ -5,6 +5,7 @@ import GrupoEstudiante from "../Models/grupoEstudianteModel";
 import Grupo from "../Models/grupoModel";
 import Usuarios from "../Models/usuarioModel";
 import Notificaciones from "../Models/NotificacionesModel";
+import TemariosGrupo from "../Models/temariosGrupoModel";
 
 export type TipoEjercicioGrupo = "diagrama" | "pseudocodigo";
 
@@ -58,6 +59,12 @@ export const listarEjerciciosDeGrupo = async (grupoId: number) => {
                 attributes: ["completado"],
                 required: false,
             },
+            {
+                model: TemariosGrupo,
+                as: "temario",
+                attributes: ["id", "nombre", "orden"],
+                required: true,
+            },
         ],
         order: [["id", "ASC"]],
     });
@@ -69,10 +76,19 @@ export const listarEjerciciosDeGrupo = async (grupoId: number) => {
     return ejercicios.map((ejercicio) => {
         const respuestas =
             (ejercicio as any).respuestas ?? [];
+        const temario = (ejercicio as any).temario ?? null;
 
         return {
             id: Number(ejercicio.id),
             grupo_id: Number(ejercicio.grupo_id),
+            temario_id: Number(ejercicio.temario_id),
+            temario: temario
+                ? {
+                      id: Number(temario.id),
+                      nombre: temario.nombre,
+                      orden: Number(temario.orden ?? 0),
+                  }
+                : null,
             titulo: ejercicio.titulo,
             enunciado: ejercicio.enunciado,
             tipo: ejercicio.tipo,
@@ -119,10 +135,12 @@ export const crearEjercicioDeGrupo = async (
         enunciado: string;
         tipo: TipoEjercicioGrupo;
         puntos: number;
+        temario_id: number;
     },
 ) => {
     const ejercicio = await EjerciciosGrupo.create({
         grupo_id: grupoId,
+        temario_id: datos.temario_id,
         titulo: datos.titulo,
         enunciado: datos.enunciado,
         tipo: datos.tipo,
@@ -144,6 +162,7 @@ export const editarEjercicioDeGrupo = async (
         enunciado?: string;
         tipo?: TipoEjercicioGrupo;
         puntos?: number;
+        temario_id?: number;
     },
 ) => {
     const ejercicio = await EjerciciosGrupo.findByPk(ejercicioId);
@@ -157,6 +176,8 @@ export const editarEjercicioDeGrupo = async (
         ejercicio.enunciado = cambios.enunciado;
     if (cambios.tipo !== undefined) ejercicio.tipo = cambios.tipo;
     if (cambios.puntos !== undefined) ejercicio.puntos = cambios.puntos;
+    if (cambios.temario_id !== undefined)
+        ejercicio.temario_id = cambios.temario_id;
 
     await ejercicio.save();
     return ejercicio;
@@ -200,6 +221,12 @@ export const listarEjerciciosEstudianteGrupo = async (
                     "ultima_actividad",
                 ],
             },
+            {
+                model: TemariosGrupo,
+                as: "temario",
+                attributes: ["id", "nombre", "orden"],
+                required: true,
+            },
         ],
         order: [["id", "ASC"]],
     });
@@ -208,10 +235,19 @@ export const listarEjerciciosEstudianteGrupo = async (
         const respuestas =
             (ejercicio as any).respuestas ?? [];
         const propio = respuestas[0] ?? null;
+        const temario = (ejercicio as any).temario ?? null;
 
         return {
             id: Number(ejercicio.id),
             grupo_id: Number(ejercicio.grupo_id),
+            temario_id: Number(ejercicio.temario_id),
+            temario: temario
+                ? {
+                      id: Number(temario.id),
+                      nombre: temario.nombre,
+                      orden: Number(temario.orden ?? 0),
+                  }
+                : null,
             titulo: ejercicio.titulo,
             enunciado: ejercicio.enunciado,
             tipo: ejercicio.tipo,
