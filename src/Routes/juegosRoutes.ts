@@ -43,7 +43,11 @@ router.post("/guardarjuegoIA", verifyToken, guardarJuegoIAController);
 router.put("/guardarTablero/:id", verifyToken, guardarEstadoTableroController);
 
 // restablecer estado del tablero de IA a null
-router.put("/reiniciarTablero/:id", verifyToken, reiniciarEstadoTableroController);
+router.put(
+    "/reiniciarTablero/:id",
+    verifyToken,
+    reiniciarEstadoTableroController,
+);
 
 // marcar juego como completado e incrementar puntos
 router.put("/completar/:id", verifyToken, completarJuegoController);

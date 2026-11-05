@@ -303,7 +303,7 @@ export const reporteGrupoController = async (
  *           type: integer
  *     responses:
  *       200:
- *         description: Progreso por ejercicio y por dÃ­a
+ *         description: Progreso del estudiante en ejercicios de grupo
  *       403:
  *         description: El estudiante no pertenece a tus grupos
  *       404:
@@ -335,7 +335,10 @@ export const reporteEstudianteController = async (
             }
         }
 
-        const reporte = await reporteEstudiante(estudianteId);
+        const reporte = await reporteEstudiante(
+            estudianteId,
+            esAdmin(req) ? undefined : { profesorId: req.usuarioActual!.id },
+        );
 
         if (!reporte) {
             res.status(404).json({ message: "Estudiante no encontrado" });

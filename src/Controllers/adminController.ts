@@ -198,7 +198,7 @@ export const listarEstudiantesController = async (
  *           type: integer
  *     responses:
  *       200:
- *         description: Progreso por ejercicio y por día
+ *         description: Progreso del estudiante en ejercicios de grupo
  *       404:
  *         description: Estudiante no encontrado
  */

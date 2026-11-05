@@ -290,55 +290,66 @@ export const reporteGrupo = async (
     };
 };
 
-export const reporteEstudiante = async (usuarioId: number) => {
+export const reporteEstudiante = async (
+    usuarioId: number,
+    opciones?: { profesorId?: number },
+) => {
     const usuario = await Usuarios.findByPk(usuarioId);
 
     if (!usuario) {
         return null;
     }
 
-    const [juegos, progresos, juegosIA, progresosIA] = await Promise.all([
-        Juegos.findAll({
-            attributes: ["id", "nombre_juego", "nivel_juego"],
+    // El reporte se basa SOLO en ejercicios de grupo:
+    // - profesor: solo ejercicios de sus grupos
+    // - admin: ejercicios de todos los grupos
+    const filtroGrupo: any = opciones?.profesorId
+        ? { where: { profesor_id: opciones.profesorId }, required: true }
+        : { required: false };
+
+    const [ejercicios, progresos] = await Promise.all([
+        EjerciciosGrupo.findAll({
+            include: [
+                {
+                    model: Grupo,
+                    as: "grupo",
+                    attributes: ["id", "nombre"],
+                    ...filtroGrupo,
+                },
+            ],
             order: [["id", "ASC"]],
             raw: true,
+            nest: true,
         }),
-        UsuarioJuegos.findAll({
-            where: { usuario_id: usuarioId },
-            raw: true,
-        }),
-        JuegosIA.findAll({
-            where: { usuario_id: usuarioId },
-            raw: true,
-        }),
-        UsuarioJuegosIA.findAll({
+        UsuarioEjerciciosGrupo.findAll({
             where: { usuario_id: usuarioId },
             raw: true,
         }),
     ]);
 
-    const progresoPorJuego = new Map<number, any>();
+    const progresoPorEjercicio = new Map<number, any>();
     (progresos as any[]).forEach((p) => {
-        progresoPorJuego.set(Number(p.juego_id), p);
+        progresoPorEjercicio.set(Number(p.ejercicio_grupo_id), p);
     });
 
-    const progresoPorJuegoIA = new Map<number, any>();
-    (progresosIA as any[]).forEach((p) => {
-        progresoPorJuegoIA.set(Number(p.juego_ia_id), p);
-    });
-
-    const ejercicios = (juegos as any[]).map((juego) => {
-        const progreso = progresoPorJuego.get(Number(juego.id));
+    const ejerciciosDeGrupo = (ejercicios as any[]).map((ejercicio) => {
+        const progreso = progresoPorEjercicio.get(Number(ejercicio.id));
+        const completado = progreso
+            ? estaCompletado(progreso.completado)
+            : false;
 
         return {
-            juego_id: Number(juego.id),
-            nombre: juego.nombre_juego,
-            nivel: Number(juego.nivel_juego),
-            completado: progreso
-                ? estaCompletado(progreso.completado)
-                : false,
+            ejercicio_id: Number(ejercicio.id),
+            titulo: ejercicio.titulo,
+            tipo: ejercicio.tipo,
+            puntos_ejercicio: Number(ejercicio.puntos ?? 0),
+            grupo: {
+                id: Number(ejercicio.grupo?.id ?? ejercicio.grupo_id),
+                nombre: ejercicio.grupo?.nombre ?? "",
+            },
+            entregado: !!progreso,
+            completado,
             puntos: progreso ? Number(progreso.puntos ?? 0) : 0,
-            intentos: progreso ? Number(progreso.intentos ?? 0) : 0,
             fecha_completado: progreso?.fecha_completado
                 ? new Date(progreso.fecha_completado).toISOString()
                 : null,
@@ -348,42 +359,17 @@ export const reporteEstudiante = async (usuarioId: number) => {
         };
     });
 
-    const ia = (juegosIA as any[]).map((juego) => {
-        const prog = progresoPorJuegoIA.get(Number(juego.id));
-        const completado = prog ? estaCompletado(prog.completado) : false;
-        return {
-            id: Number(juego.id),
-            descripcion: juego.descripcion,
-            tipo: juego.tipo_juego,
-            completado,
-            puntos: prog ? Number(prog.puntos ?? 0) : 0,
-            fecha_completado:
-                completado && (prog?.fecha_completado ?? prog?.ultima_actividad)
-                    ? new Date(
-                          prog.fecha_completado ?? prog.ultima_actividad,
-                      ).toISOString()
-                    : null,
-        };
-    });
-
-    const eventos = [
-        ...(progresos as any[])
-            .filter((p) => estaCompletado(p.completado) && p.fecha_completado)
-            .map((p) => ({
-                fecha: aDia(p.fecha_completado),
-                puntos: Number(p.puntos ?? 0),
-            })),
-        ...(progresosIA as any[])
-            .filter(
-                (j) =>
-                    estaCompletado(j.completado) &&
-                    (j.fecha_completado ?? j.ultima_actividad),
-            )
-            .map((j) => ({
-                fecha: aDia(j.fecha_completado ?? j.ultima_actividad),
-                puntos: Number(j.puntos ?? 0),
-            })),
-    ].filter((evento) => evento.fecha) as { fecha: string; puntos: number }[];
+    // Actividad por dia con las entregas de grupo completadas
+    const eventos = (progresos as any[])
+        .filter((p) => estaCompletado(p.completado) && p.fecha_completado)
+        .map((p) => ({
+            fecha: aDia(p.fecha_completado),
+            puntos: Number(p.puntos ?? 0),
+        }))
+        .filter((evento) => evento.fecha) as {
+        fecha: string;
+        puntos: number;
+    }[];
 
     const porDia = new Map<string, { completados: number; puntos: number }>();
 
@@ -401,12 +387,10 @@ export const reporteEstudiante = async (usuarioId: number) => {
         .map(([fecha, datos]) => ({ fecha, ...datos }))
         .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-    const fijosCompletados = ejercicios.filter((e) => e.completado).length;
-    const iaCompletados = ia.filter((j) => j.completado).length;
-    const puntos =
-        sumar(ejercicios.map((e) => e.puntos)) +
-        sumar(ia.map((j) => j.puntos));
-    const denominador = juegos.length + ia.length;
+    const completados = ejerciciosDeGrupo.filter((e) => e.completado).length;
+    const entregados = ejerciciosDeGrupo.filter((e) => e.entregado).length;
+    const puntos = sumar((progresos as any[]).map((p) => p.puntos));
+    const denominador = ejerciciosDeGrupo.length;
 
     return {
         usuario: {
@@ -418,22 +402,15 @@ export const reporteEstudiante = async (usuarioId: number) => {
         },
         resumen: {
             puntos,
-            fijosCompletados,
-            fijosTotales: juegos.length,
-            iaCompletados,
-            iaGenerados: ia.length,
+            ejerciciosCompletados: completados,
+            ejerciciosEntregados: entregados,
+            ejerciciosTotales: denominador,
             progreso:
                 denominador > 0
-                    ? Number(
-                          (
-                              (fijosCompletados + iaCompletados) /
-                              denominador
-                          ).toFixed(2),
-                      )
+                    ? Number((completados / denominador).toFixed(2))
                     : 0,
         },
-        ejercicios,
-        ia,
+        ejercicios: ejerciciosDeGrupo,
         actividadPorDia,
     };
 };
