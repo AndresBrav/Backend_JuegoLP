@@ -60,8 +60,7 @@ UsuarioJuegosIA.belongsTo(JuegosIA, {
     targetKey: "id",
 });
 
-// Clasificación por temario (solo para ejercicios de pseudocódigo;
-// queda null en los de diagramas)
+// Clasificación por temario para ejercicios generados con IA.
 JuegosIA.belongsTo(TemariosIA, {
     as: "temario",
     foreignKey: "temario_id",

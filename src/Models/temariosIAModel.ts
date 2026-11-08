@@ -13,8 +13,8 @@ export interface TemarioIAInstance
     extends Model<TemarioIAAttributes>,
         TemarioIAAttributes {}
 
-// Temarios globales para los ejercicios de pseudocódigo generados
-// con IA (clasificación pedagógica: Variables, Condicionales, etc.)
+// Temarios globales para ejercicios generados con IA
+// (clasificación pedagógica: Variables, Condicionales, etc.)
 const TemariosIA = db.define<TemarioIAInstance>("TemariosIA", {
     id: {
         type: DataTypes.INTEGER,

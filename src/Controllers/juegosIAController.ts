@@ -17,7 +17,7 @@ import {
  * /juegos/temarios:
  *   get:
  *     tags: [Juegos IA]
- *     summary: Listar los temarios globales de IA (para ejercicios de pseudocódigo)
+ *     summary: Listar los temarios globales de ejercicios IA
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -193,7 +193,7 @@ const traerJuegosControllerPseudo = async (
  *                 type: integer
  *               temario_id:
  *                 type: integer
- *                 description: Solo aplica a tipo_juego iapseudo
+ *                 description: Aplica a ejercicios de tipo ia e iapseudo
  *     responses:
  *       201:
  *         description: Juego IA guardado correctamente

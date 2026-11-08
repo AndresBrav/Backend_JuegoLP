@@ -58,6 +58,11 @@ export const obtenerTodosLosJuegosIA = async (
                 where: { usuario_id },
                 required: false,
             },
+            {
+                model: TemariosIA,
+                as: "temario",
+                required: false,
+            },
         ],
         order: [["id", "ASC"]],
     });
@@ -110,9 +115,11 @@ export const guardarJuegoIA = async (
     puntos?: number,
     temarioId?: number,
 ): Promise<JuegoIAPlano> => {
-    // El temario solo aplica a ejercicios de pseudocódigo IA
+    // Los temarios IA clasifican ejercicios de diagramas y pseudocódigo.
     const temarioValido =
-        tipo_juego === "iapseudo" && temarioId ? Number(temarioId) : null;
+        ["ia", "iapseudo"].includes(tipo_juego) && temarioId
+            ? Number(temarioId)
+            : null;
     let nombreTemario: string | null = null;
 
     if (temarioValido) {
