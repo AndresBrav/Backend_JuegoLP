@@ -9,7 +9,56 @@ import {
     obtenerJuegoIAPorId,
     guardarEstadoTableroJuegoIA,
     reiniciarEstadoTableroJuegoIA,
+    obtenerTemariosIA,
 } from "../Services/juegosiaServicios";
+
+/**
+ * @swagger
+ * /juegos/temarios:
+ *   get:
+ *     tags: [Juegos IA]
+ *     summary: Listar los temarios globales de IA (para ejercicios de pseudocódigo)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de temarios IA
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 temarios:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       nombre:
+ *                         type: string
+ *                       orden:
+ *                         type: integer
+ *       401:
+ *         description: Token no valido
+ *       403:
+ *         description: Acceso denegado (sin token)
+ *       500:
+ *         description: Error interno
+ */
+const traerTemariosIAController = async (
+    _req: AuthenticatedRequest,
+    res: Response,
+) => {
+    try {
+        const temarios = await obtenerTemariosIA();
+        res.json({ temarios });
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        }
+    }
+};
 
 /**
  * @swagger
@@ -142,6 +191,9 @@ const traerJuegosControllerPseudo = async (
  *                 type: boolean
  *               puntos:
  *                 type: integer
+ *               temario_id:
+ *                 type: integer
+ *                 description: Solo aplica a tipo_juego iapseudo
  *     responses:
  *       201:
  *         description: Juego IA guardado correctamente
@@ -174,7 +226,13 @@ const guardarJuegoIAController = async (
         const usuario = await obtenerUnUsuarioServicio(nombre, password);
         const usuario_id = usuario.id;
 
-        const { descripcion, tipo_juego, completado, puntos } = req.body;
+        const {
+            descripcion,
+            tipo_juego,
+            completado,
+            puntos,
+            temario_id,
+        } = req.body;
 
         if (!descripcion || !tipo_juego) {
             res.status(400).json({
@@ -189,6 +247,7 @@ const guardarJuegoIAController = async (
             tipo_juego,
             completado,
             puntos,
+            temario_id ? Number(temario_id) : undefined,
         );
 
         res.status(201).json({
@@ -471,6 +530,7 @@ const reiniciarEstadoTableroController = async (
 };
 
 export {
+    traerTemariosIAController,
     traerJuegosController,
     guardarJuegoIAController,
     completarJuegoController,

@@ -1,4 +1,5 @@
 import JuegosIA, { JuegosIAInstance } from "../Models/juegos_iaModel";
+import TemariosIA from "../Models/temariosIAModel";
 import UsuarioJuegosIA, {
     UsuarioJuegosIAInstance,
 } from "../Models/usuario_juegosIAModel";
@@ -11,6 +12,8 @@ export interface JuegoIAPlano {
     completado: boolean;
     puntos: number;
     estado_tablero: string | null;
+    temario_id: number | null;
+    temario_nombre: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -37,6 +40,8 @@ const aplanarJuego = (juego: any): JuegoIAPlano => {
         completado: Boolean(progreso?.completado),
         puntos: Number(progreso?.puntos ?? 0),
         estado_tablero: progreso?.estado_tablero ?? null,
+        temario_id: raw.temario_id ?? null,
+        temario_nombre: raw.temario?.nombre ?? null,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
     };
@@ -71,11 +76,30 @@ export const obtenerTodosLosJuegosIAPseudo = async (
                 where: { usuario_id },
                 required: false,
             },
+            {
+                model: TemariosIA,
+                as: "temario",
+                required: false,
+            },
         ],
         order: [["id", "ASC"]],
     });
 
     return juegos.map(aplanarJuego);
+};
+
+/** Temarios globales de IA disponibles para clasificar ejercicios. */
+export const obtenerTemariosIA = async () => {
+    const temarios = await TemariosIA.findAll({
+        order: [["orden", "ASC"]],
+        raw: true,
+    });
+
+    return temarios.map((t) => ({
+        id: Number(t.id),
+        nombre: String(t.nombre),
+        orden: Number(t.orden ?? 0),
+    }));
 };
 
 export const guardarJuegoIA = async (
@@ -84,11 +108,26 @@ export const guardarJuegoIA = async (
     tipo_juego: string,
     completado?: boolean,
     puntos?: number,
+    temarioId?: number,
 ): Promise<JuegoIAPlano> => {
+    // El temario solo aplica a ejercicios de pseudocódigo IA
+    const temarioValido =
+        tipo_juego === "iapseudo" && temarioId ? Number(temarioId) : null;
+    let nombreTemario: string | null = null;
+
+    if (temarioValido) {
+        const temario = await TemariosIA.findByPk(temarioValido);
+        if (!temario) {
+            throw new Error("El temario indicado no existe");
+        }
+        nombreTemario = temario.get("nombre") as string;
+    }
+
     const juegoIA = await JuegosIA.create({
         usuario_id,
         descripcion,
         tipo_juego,
+        temario_id: temarioValido,
     });
 
     const estaCompletado = Boolean(completado);
@@ -112,6 +151,8 @@ export const guardarJuegoIA = async (
         completado: Boolean(progreso.completado),
         puntos: Number(progreso.puntos ?? 0),
         estado_tablero: progreso.estado_tablero ?? null,
+        temario_id: juegoIA.temario_id ?? null,
+        temario_nombre: nombreTemario,
         createdAt: juegoIA.createdAt,
         updatedAt: juegoIA.updatedAt,
     };
@@ -157,6 +198,8 @@ export const completarJuegoIA = async (
         completado: Boolean(progreso.completado),
         puntos: Number(progreso.puntos ?? 0),
         estado_tablero: progreso.estado_tablero ?? null,
+        temario_id: juego.temario_id ?? null,
+        temario_nombre: null,
         createdAt: juego.createdAt,
         updatedAt: juego.updatedAt,
     };
@@ -223,6 +266,8 @@ export const guardarEstadoTableroJuegoIA = async (
         completado: Boolean(progreso.completado),
         puntos: Number(progreso.puntos ?? 0),
         estado_tablero: progreso.estado_tablero ?? null,
+        temario_id: juego.temario_id ?? null,
+        temario_nombre: null,
         createdAt: juego.createdAt,
         updatedAt: juego.updatedAt,
     };
@@ -257,6 +302,8 @@ export const reiniciarEstadoTableroJuegoIA = async (
         completado: Boolean(progreso?.completado),
         puntos: Number(progreso?.puntos ?? 0),
         estado_tablero: null,
+        temario_id: juego.temario_id ?? null,
+        temario_nombre: null,
         createdAt: juego.createdAt,
         updatedAt: juego.updatedAt,
     };

@@ -15,6 +15,7 @@ import {
     obtenerJuegoIAController,
     guardarEstadoTableroController,
     reiniciarEstadoTableroController,
+    traerTemariosIAController,
 } from "../Controllers/juegosIAController";
 
 const router = express.Router();
@@ -27,6 +28,9 @@ router.put("/reiniciarEstado/:id", verifyToken, reiniciarEstadoJuegoController);
 
 // obtener la API key de Gemini para el cliente autenticado
 router.get("/gemini-key", verifyToken, obtenerGeminiKeyController);
+
+// temarios globales de IA para clasificar ejercicios de pseudocódigo
+router.get("/temarios", verifyToken, traerTemariosIAController);
 
 // trae los juegos con IA que se guardo
 router.get("/traerJuegosConIA", verifyToken, traerJuegosController);

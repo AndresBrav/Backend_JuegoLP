@@ -1,6 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import db from "../db/conexion";
 import UsuarioJuegosIA from "./usuario_juegosIAModel";
+import TemariosIA from "./temariosIAModel";
 
 // atributos
 export interface JuegosIAAttributes {
@@ -8,6 +9,7 @@ export interface JuegosIAAttributes {
     descripcion?: string;
     tipo_juego?: string;
     usuario_id?: number;
+    temario_id?: number | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -37,6 +39,10 @@ const JuegosIA = db.define<JuegosIAInstance>(
             type: DataTypes.INTEGER,
             allowNull: true,
         },
+        temario_id: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
     },
     {
         tableName: "juegosia",
@@ -51,6 +57,14 @@ JuegosIA.hasMany(UsuarioJuegosIA, {
 
 UsuarioJuegosIA.belongsTo(JuegosIA, {
     foreignKey: "juego_ia_id",
+    targetKey: "id",
+});
+
+// Clasificación por temario (solo para ejercicios de pseudocódigo;
+// queda null en los de diagramas)
+JuegosIA.belongsTo(TemariosIA, {
+    as: "temario",
+    foreignKey: "temario_id",
     targetKey: "id",
 });
 
