@@ -213,6 +213,33 @@ export const listarEjerciciosGrupoEstudianteController = async (
     }
 };
 
+/**
+ * @swagger
+ * /estudiante/grupos/{id}/ejercicios/{ejercicioId}:
+ *   get:
+ *     tags: [Estudiante]
+ *     summary: Obtener un ejercicio de grupo con la solución y comentario propios
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: ejercicioId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Incluye comentario_profesor de la entrega del estudiante autenticado.
+ *       403:
+ *         description: El estudiante no pertenece al grupo.
+ *       404:
+ *         description: Ejercicio no encontrado.
+ */
 export const obtenerEjercicioEstudianteController = async (
     req: RequestAutenticado,
     res: Response,

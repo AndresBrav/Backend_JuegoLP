@@ -15,6 +15,7 @@ import {
     eliminarEjercicioGrupoController,
     listarSolucionesEjercicioController,
     calificarEntregaController,
+    guardarComentarioEntregaController,
     obtenerRankingGrupoProfesorController,
     listarTemariosGrupoController,
     crearTemarioGrupoController,
@@ -41,6 +42,7 @@ router.post("/grupos/:id/ejercicios", crearEjercicioGrupoController);
 router.put("/ejercicios/:id", editarEjercicioGrupoController);
 router.delete("/ejercicios/:id", eliminarEjercicioGrupoController);
 router.get("/ejercicios/:id/soluciones", listarSolucionesEjercicioController);
+router.put("/ejercicios/:id/comentario/:estudianteId", guardarComentarioEntregaController);
 router.put("/ejercicios/:id/calificar/:estudianteId", calificarEntregaController);
 
 // Temarios del grupo

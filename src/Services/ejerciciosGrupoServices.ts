@@ -299,6 +299,7 @@ export const obtenerEjercicioEstudiante = async (
         fecha_completado: propio?.fecha_completado ?? null,
         ultima_actividad: propio?.ultima_actividad ?? null,
         estado_tablero: propio?.estado_tablero ?? null,
+        comentario_profesor: propio?.comentario_profesor ?? null,
     };
 };
 
@@ -465,6 +466,7 @@ export const listarSolucionesEjercicio = async (
             "completado",
             "puntos",
             "estado_tablero",
+            "comentario_profesor",
             "fecha_completado",
             "ultima_actividad",
         ],
@@ -491,6 +493,7 @@ export const listarSolucionesEjercicio = async (
             ultima_actividad: respuesta?.ultima_actividad ?? null,
             tieneSolucion: Boolean(respuesta?.estado_tablero),
             estado_tablero: respuesta?.estado_tablero ?? null,
+            comentario_profesor: respuesta?.comentario_profesor ?? null,
         };
     });
 
@@ -513,6 +516,29 @@ export const obtenerPuntuacionGrupos = async (
     const puntos = puntosRaw as unknown as { puntos: number }[];
 
     return puntos.reduce((acc, x) => acc + Number(x.puntos ?? 0), 0);
+};
+
+/** Guarda el comentario del profesor en una entrega específica ya completada. */
+export const guardarComentarioEntregaEstudiante = async (
+    ejercicioId: number,
+    estudianteId: number,
+    comentario: string | null,
+) => {
+    const respuesta = await UsuarioEjerciciosGrupo.findOne({
+        where: {
+            ejercicio_grupo_id: ejercicioId,
+            usuario_id: estudianteId,
+        },
+    });
+
+    if (!respuesta || !respuesta.completado) {
+        throw new Error("SIN_ENTREGA");
+    }
+
+    respuesta.comentario_profesor = comentario;
+    await respuesta.save();
+
+    return respuesta;
 };
 
 /** Permite al profesor asignar/modificar la nota (puntos) de la entrega de un estudiante.

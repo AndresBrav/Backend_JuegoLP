@@ -21,6 +21,7 @@ import {
     obtenerEjercicioPorId,
     listarSolucionesEjercicio,
     calificarEntregaEstudiante,
+    guardarComentarioEntregaEstudiante,
     esTipoEjercicioValido,
     obtenerRankingGrupo,
 } from "../Services/ejerciciosGrupoServices";
@@ -569,6 +570,104 @@ export const listarSolucionesEjercicioController = async (
     } catch (error: any) {
         console.error("ERROR listarSolucionesEjercicioController:", error);
         res.status(500).json({ message: "No se pudieron obtener las soluciones" });
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/ejercicios/{id}/comentario/{estudianteId}:
+ *   put:
+ *     tags: [Profesor]
+ *     summary: Guardar un comentario opcional en la entrega de un estudiante
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: estudianteId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [comentario]
+ *             properties:
+ *               comentario:
+ *                 type: string
+ *                 description: Puede estar vacío para quitar el comentario.
+ *     responses:
+ *       200:
+ *         description: Comentario guardado
+ *       400:
+ *         description: Parámetros inválidos o no existe una entrega completada
+ *       403:
+ *         description: No tienes acceso a este ejercicio
+ *       404:
+ *         description: Ejercicio no encontrado
+ */
+export const guardarComentarioEntregaController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const ejercicioId = Number(req.params.id);
+        const estudianteId = Number(req.params.estudianteId);
+        const comentario = req.body?.comentario;
+
+        if (
+            !Number.isInteger(ejercicioId) ||
+            ejercicioId <= 0 ||
+            !Number.isInteger(estudianteId) ||
+            estudianteId <= 0
+        ) {
+            res.status(400).json({ message: "Parámetros inválidos" });
+            return;
+        }
+
+        if (typeof comentario !== "string") {
+            res.status(400).json({ message: "El comentario debe ser texto" });
+            return;
+        }
+
+        const ejercicio = await obtenerEjercicioPorId(ejercicioId);
+        if (!ejercicio) {
+            res.status(404).json({ message: "Ejercicio no encontrado" });
+            return;
+        }
+
+        const grupo = await obtenerGrupoPorId(Number(ejercicio.grupo_id));
+        if (!grupo || (!esAdmin(req) && grupo.profesor_id !== req.usuarioActual!.id)) {
+            res.status(403).json({ message: "No tienes acceso a este ejercicio" });
+            return;
+        }
+
+        const respuesta = await guardarComentarioEntregaEstudiante(
+            ejercicioId,
+            estudianteId,
+            comentario.trim() || null,
+        );
+
+        res.json({
+            message: "Comentario guardado correctamente",
+            comentario_profesor: respuesta.comentario_profesor,
+        });
+    } catch (error: any) {
+        if (error?.message === "SIN_ENTREGA") {
+            res.status(400).json({
+                message: "Solo se puede comentar una entrega completada",
+            });
+            return;
+        }
+        console.error("ERROR guardarComentarioEntregaController:", error);
+        res.status(500).json({ message: "No se pudo guardar el comentario" });
     }
 };
 
