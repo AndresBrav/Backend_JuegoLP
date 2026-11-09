@@ -5,7 +5,7 @@ import {
     salirDeGrupo,
     unirEstudiantePorCodigo,
 } from "../Services/grupoServices";
-import { reporteEstudiante } from "../Services/reporteServices";
+import { reporteEstudiante, miProgresoEstudiante } from "../Services/reporteServices";
 import {
     listarEjerciciosEstudianteGrupo,
     obtenerEjercicioEstudiante,
@@ -157,7 +157,7 @@ export const salirDeGrupoController = async (
  * /estudiante/progreso:
  *   get:
  *     tags: [Estudiante]
- *     summary: Ver el progreso propio por ejercicio y por dÃ­a
+ *     summary: Ver el progreso propio (fijos, IA y ejercicios de grupo)
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -169,7 +169,7 @@ export const miProgresoController = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const reporte = await reporteEstudiante(req.usuarioActual!.id);
+        const reporte = await miProgresoEstudiante(req.usuarioActual!.id);
 
         if (!reporte) {
             res.status(404).json({ message: "Usuario no encontrado" });

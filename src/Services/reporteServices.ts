@@ -415,6 +415,69 @@ export const reporteEstudiante = async (
     };
 };
 
+// Progreso PROPIO del estudiante para el dashboard (/estudiante/progreso).
+// A diferencia de reporteEstudiante (reportes del profesor, solo ejercicios
+// de grupo), aquí también se computan los ejercicios fijos (tabla Juegos,
+// persistidos en Usuario_Juegos) y los generados con IA (juegosia +
+// Usuario_JuegosIA). Separa el progreso por tipo y calcula el total sobre
+// fijos + IA, igual que resumirEstudiantes hace por estudiante.
+export const miProgresoEstudiante = async (usuarioId: number) => {
+    const base = await reporteEstudiante(usuarioId);
+
+    if (!base) {
+        return null;
+    }
+
+    const [juegosFijos, progresosFijos, generadosIA, progresosIA] =
+        await Promise.all([
+            Juegos.findAll({ attributes: ["id"], raw: true }),
+            UsuarioJuegos.findAll({
+                where: { usuario_id: usuarioId },
+                raw: true,
+            }),
+            JuegosIA.count({ where: { usuario_id: usuarioId } }),
+            UsuarioJuegosIA.findAll({
+                where: { usuario_id: usuarioId },
+                raw: true,
+            }),
+        ]);
+
+    const idsFijos = new Set(
+        (juegosFijos as any[]).map((j) => Number(j.id)),
+    );
+    const fijosCompletados = (progresosFijos as any[]).filter(
+        (p) => idsFijos.has(Number(p.juego_id)) && estaCompletado(p.completado),
+    ).length;
+    const iaCompletados = (progresosIA as any[]).filter((p) =>
+        estaCompletado(p.completado),
+    ).length;
+
+    const fijosTotales: number = idsFijos.size;
+    const iaGenerados = Number(generadosIA);
+
+    const denominadorTotal = fijosTotales + iaGenerados;
+    const progresoTotal =
+        denominadorTotal > 0
+            ? Number(
+                  ((fijosCompletados + iaCompletados) / denominadorTotal).toFixed(
+                      2,
+                  ),
+              )
+            : 0;
+
+    return {
+        ...base,
+        resumen: {
+            ...base.resumen,
+            fijosCompletados,
+            fijosTotales,
+            iaCompletados,
+            iaGenerados,
+            progreso: progresoTotal,
+        },
+    };
+};
+
 export const estadisticasGlobales = async () => {
     const [
         estudiantes,
