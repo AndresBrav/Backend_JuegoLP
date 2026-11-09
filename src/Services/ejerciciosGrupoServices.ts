@@ -272,7 +272,8 @@ export const obtenerEjercicioEstudiante = async (
             {
                 model: UsuarioEjerciciosGrupo,
                 as: "respuestas",
-                where: { usuario_id: estudianteId },
+                // La respuesta SIEMPRE se busca dentro del propio ejercicio
+                where: { usuario_id: estudianteId, ejercicio_grupo_id: ejercicioId },
                 required: false,
             },
         ],
@@ -449,7 +450,10 @@ export const listarSolucionesEjercicio = async (
 
     const idsFiltrados = estudiantes.map((e) => Number(e.id));
 
-    const whereRespuestas: any = { usuario_id: { [Op.in]: idsFiltrados } };
+    const whereRespuestas: any = {
+        ejercicio_grupo_id: Number(ejercicioId),
+        usuario_id: { [Op.in]: idsFiltrados },
+    };
     if (usuarioFiltrado !== null) {
         whereRespuestas.usuario_id = usuarioFiltrado;
     }
@@ -511,13 +515,15 @@ export const obtenerPuntuacionGrupos = async (
     return puntos.reduce((acc, x) => acc + Number(x.puntos ?? 0), 0);
 };
 
-/** Permite al profesor asignar/modificar la nota (puntos) de la entrega de un estudiante. */
+/** Permite al profesor asignar/modificar la nota (puntos) de la entrega de un estudiante.
+ * SOLO califica entregas reales: si el estudiante nunca entregó lanza SIN_ENTREGA
+ * (antes creaba una fila falsa "completado" que inventaba una entrega). */
 export const calificarEntregaEstudiante = async (
     ejercicioId: number,
     estudianteId: number,
     puntos: number,
 ) => {
-    let respuesta = await UsuarioEjerciciosGrupo.findOne({
+    const respuesta = await UsuarioEjerciciosGrupo.findOne({
         where: {
             ejercicio_grupo_id: ejercicioId,
             usuario_id: estudianteId,
@@ -525,22 +531,12 @@ export const calificarEntregaEstudiante = async (
     });
 
     if (!respuesta) {
-        respuesta = await UsuarioEjerciciosGrupo.create({
-            usuario_id: estudianteId,
-            ejercicio_grupo_id: ejercicioId,
-            completado: true,
-            puntos,
-            fecha_completado: new Date(),
-            ultima_actividad: new Date(),
-        });
-    } else {
-        respuesta.puntos = puntos;
-        respuesta.completado = true;
-        if (!respuesta.fecha_completado) {
-            respuesta.fecha_completado = new Date();
-        }
-        await respuesta.save();
+        throw new Error("SIN_ENTREGA");
     }
+
+    // Solo se actualiza la nota: el estado real de la entrega no cambia.
+    respuesta.puntos = puntos;
+    await respuesta.save();
 
     return respuesta;
 };

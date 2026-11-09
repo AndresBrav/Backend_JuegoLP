@@ -615,6 +615,13 @@ export const calificarEntregaController = async (
             respuesta,
         });
     } catch (error: any) {
+        if (error?.message === "SIN_ENTREGA") {
+            res.status(400).json({
+                message:
+                    "El estudiante aún no ha entregado el ejercicio; solo se califican entregas reales",
+            });
+            return;
+        }
         console.error("ERROR calificarEntregaController:", error);
         res.status(500).json({ message: "No se pudo asignar la calificación" });
     }
