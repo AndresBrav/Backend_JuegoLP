@@ -671,6 +671,46 @@ export const guardarComentarioEntregaController = async (
     }
 };
 
+/**
+ * @swagger
+ * /profesor/ejercicios/{id}/calificar/{estudianteId}:
+ *   put:
+ *     tags: [Profesor]
+ *     summary: Asignar o actualizar la nota de una entrega
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: estudianteId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [puntos]
+ *             properties:
+ *               puntos:
+ *                 type: integer
+ *                 minimum: 0
+ *     responses:
+ *       200:
+ *         description: Nota guardada y entrega marcada como calificada, incluso con 0 puntos.
+ *       400:
+ *         description: Nota inválida o no existe una entrega
+ *       403:
+ *         description: No tienes acceso a este ejercicio
+ *       404:
+ *         description: Ejercicio no encontrado
+ */
 export const calificarEntregaController = async (
     req: RequestAutenticado,
     res: Response,

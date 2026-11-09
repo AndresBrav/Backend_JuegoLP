@@ -465,6 +465,7 @@ export const listarSolucionesEjercicio = async (
             "usuario_id",
             "completado",
             "puntos",
+            "calificado",
             "estado_tablero",
             "comentario_profesor",
             "fecha_completado",
@@ -489,6 +490,7 @@ export const listarSolucionesEjercicio = async (
             },
             completado: Boolean(respuesta?.completado),
             puntos: Number(respuesta?.puntos ?? 0),
+            calificado: Boolean(respuesta?.calificado),
             fecha_completado: respuesta?.fecha_completado ?? null,
             ultima_actividad: respuesta?.ultima_actividad ?? null,
             tieneSolucion: Boolean(respuesta?.estado_tablero),
@@ -560,8 +562,8 @@ export const calificarEntregaEstudiante = async (
         throw new Error("SIN_ENTREGA");
     }
 
-    // Solo se actualiza la nota: el estado real de la entrega no cambia.
     respuesta.puntos = puntos;
+    respuesta.calificado = true;
     await respuesta.save();
 
     return respuesta;

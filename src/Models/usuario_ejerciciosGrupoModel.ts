@@ -7,6 +7,7 @@ export interface UsuarioEjerciciosGrupoAttributes {
     ejercicio_grupo_id?: number;
     completado?: boolean;
     puntos?: number;
+    calificado?: boolean;
     estado_tablero?: string | null;
     comentario_profesor?: string | null;
     fecha_completado?: Date | null;
@@ -40,6 +41,11 @@ const UsuarioEjerciciosGrupo = db.define<UsuarioEjerciciosGrupoInstance>(
         puntos: {
             type: DataTypes.INTEGER,
             defaultValue: 0,
+        },
+        calificado: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
         },
         estado_tablero: {
             type: DataTypes.TEXT("long"),
