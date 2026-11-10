@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken"; // Asegúrate de importar jsonwebtoken
 // import cors from "cors";
 import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken"; // Importa verifyToken
-import { Rol, Usuario } from "../interfaces/Usuario";
+import { Usuario } from "../interfaces/Usuario";
 
 import {
     obtenerTodosLosUsuarios,
@@ -31,9 +31,9 @@ dotenv.config(); // ¡Esto carga el archivo .env!
 import { encrypt, decrypt } from "../utils/encriptador";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 import { RequestAutenticado } from "../Middlewares/cargarUsuarioActual";
+import { miProgresoEstudiante } from "../Services/reporteServices";
 import {
     esCodigoValido,
-    esRolDeRegistro,
     normalizarCodigo,
 } from "../Validations/validaciones";
 
@@ -398,7 +398,6 @@ const borrar = async (req: Request, res: Response) => {
  *               - username
  *               - edad
  *               - password
- *               - rol
  *             properties:
  *               codigo:
  *                 type: string
@@ -410,10 +409,6 @@ const borrar = async (req: Request, res: Response) => {
  *                 type: integer
  *               password:
  *                 type: string
- *               rol:
- *                 type: string
- *                 enum: [estudiante, profesor]
- *                 description: admin no se permite por registro público
  *     responses:
  *       201:
  *         description: Token de acceso
@@ -428,17 +423,10 @@ const borrar = async (req: Request, res: Response) => {
  */
 const RegistrarLogin = async (req: Request, res: Response) => {
     try {
-        const { codigo, username, edad, password, rol } = req.body ?? {};
+        const { codigo, username, edad, password } = req.body ?? {};
 
-        if (!codigo || !username || !edad || !password || !rol) {
+        if (!codigo || !username || !edad || !password) {
             res.status(400).json({ message: "Faltan datos en la solicitud" });
-            return;
-        }
-
-        if (!esRolDeRegistro(rol)) {
-            res.status(400).json({
-                message: "Rol no permitido. Usa estudiante o profesor",
-            });
             return;
         }
 
@@ -494,7 +482,7 @@ const RegistrarLogin = async (req: Request, res: Response) => {
             username: usernameNormalizado,
             edad: edadNumero,
             password: String(password),
-            rol: rol as Rol,
+            rol: "estudiante",
         });
 
         res.status(201).json({ token: firmarToken(usuario) });
@@ -887,6 +875,46 @@ const actualizarPefilFoto = async (
     });
 };
 
+/**
+ * @swagger
+ * /usuarios/me/progreso:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Progreso propio (fijos, IA y total) para el dashboard
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resumen de fijos y IA del usuario autenticado
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error interno
+ */
+const miProgreso = async (req: RequestAutenticado, res: Response) => {
+    try {
+        const id = req.usuarioActual?.id;
+
+        if (!id) {
+            res.status(401).json({ message: "No autenticado" });
+            return;
+        }
+
+        const progreso = await miProgresoEstudiante(Number(id));
+
+        if (!progreso) {
+            res.status(404).json({ message: "Usuario no encontrado" });
+            return;
+        }
+
+        res.json(progreso);
+    } catch (error: any) {
+        console.error("ERROR miProgreso:", error);
+        res.status(500).json({ message: "No se pudo obtener tu progreso" });
+    }
+};
+
+
 // Exportar las funciones para usarlas en las rutas
 export {
     consultarUsuarios,
@@ -898,6 +926,7 @@ export {
     iniciarSesion,
     verificarLogin,
     traerMiPerfil,
+    miProgreso,
     traerDatosUnUsuario,
     traerPuntuacion,
     traerJuegosCompletados,

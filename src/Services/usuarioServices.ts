@@ -60,7 +60,7 @@ export const aniadirUsuario = async (
             username,
             edad,
             password,
-            rol: rol === "profesor" ? "profesor" : "estudiante",
+            rol: "estudiante",
             idAvatar: 1,
         });
         return true;

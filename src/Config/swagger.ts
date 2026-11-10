@@ -46,22 +46,9 @@ const swaggerOptions: Options = {
                         idAvatar: { type: "integer", description: "Identificador del avatar asignado" },
                         rol: {
                             type: "string",
-                            enum: ["estudiante", "profesor", "admin"],
+                            enum: ["estudiante", "admin"],
                             description: "Rol del usuario",
                         },
-                    },
-                },
-                Grupo: {
-                    type: "object",
-                    properties: {
-                        id: { type: "integer" },
-                        nombre: { type: "string", example: "10-A" },
-                        codigo: {
-                            type: "string",
-                            example: "A7K2P9",
-                            description: "Código para que los estudiantes se unan",
-                        },
-                        profesor_id: { type: "integer" },
                     },
                 },
                 Juego: {

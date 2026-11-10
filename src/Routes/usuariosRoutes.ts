@@ -8,6 +8,7 @@ import {
     RegistrarLogin,
     iniciarSesion,
     traerMiPerfil,
+    miProgreso,
     traerDatosUnUsuario,
     traerPuntuacion,
     traerJuegosCompletados,
@@ -73,6 +74,17 @@ router.post("/login/registrar", RegistrarLogin);
 router.post("/login/iniciar", iniciarSesion);
 
 router.get("/me", verifyToken, cargarUsuarioActual, traerMiPerfil);
+
+/**
+ * @swagger
+ * /usuarios/me/progreso:
+ *   get:
+ *     tags: [Usuarios]
+ *     summary: Progreso propio (fijos, IA y total) para el dashboard
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get("/me/progreso", verifyToken, cargarUsuarioActual, miProgreso);
 
 // Ruta protegida que requiere token
 router.get("/traerDatosUsuario", verifyToken, traerDatosUnUsuario);
