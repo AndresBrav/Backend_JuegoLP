@@ -10,7 +10,7 @@ export const isNumero = (x: any): boolean => {
 
 /** Roles que un usuario puede elegir al registrarse. Admin queda fuera. */
 export const esRolDeRegistro = (valor: any): valor is Rol => {
-    return valor === "estudiante";
+    return valor === "estudiante" || valor === "profesor";
 };
 
 /** Código institucional: string alfanumérico de 4 a 20 caracteres. */

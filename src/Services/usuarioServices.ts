@@ -8,7 +8,8 @@ import UsuarioJuegos from "../Models/usuario_juegosModel";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
 
-import { isString, isNumero } from "../Validations/validaciones";
+import { isString, isNumero, esRolDeRegistro } from "../Validations/validaciones";
+import UsuarioEjerciciosGrupo from "../Models/usuario_ejerciciosGrupoModel";
 
 export const obtenerTodosLosUsuarios = async (): Promise<
     UsuariosInstance[]
@@ -55,12 +56,15 @@ export const aniadirUsuario = async (
         isString(username) &&
         isString(password)
     ) {
+        // Solo estudiante o profesor desde el registro público; admin
+        // se crea exclusivamente con el seeder.
+        const rolFinal = esRolDeRegistro(rol) ? rol : "estudiante";
         await Usuarios.create({
             codigo: codigo.trim(),
             username,
             edad,
             password,
-            rol: "estudiante",
+            rol: rolFinal,
             idAvatar: 1,
         });
         return true;
@@ -266,6 +270,22 @@ export const crearUsuario = async (datos: {
     });
 };
 
+/** Puntos ganados en ejercicios de grupo: SOLO la calificación del
+ * profesor (`puntos_profesor`). La entrega del estudiante no otorga
+ * puntos, por lo que la columna `puntos` no se suma al perfil. */
+export const obtenerPuntuacionGrupos = async (idUser: number) => {
+    const filas = (await UsuarioEjerciciosGrupo.findAll({
+        attributes: ["puntos_profesor"],
+        where: { usuario_id: idUser },
+        raw: true,
+    })) as unknown as { puntos_profesor: number | null }[];
+
+    return filas.reduce(
+        (acc, f) => acc + Number(f.puntos_profesor ?? 0),
+        0,
+    );
+};
+
 export const obtenerPerfilCompleto = async (id: number) => {
     const usuario = await Usuarios.findByPk(id);
 
@@ -279,6 +299,7 @@ export const obtenerPerfilCompleto = async (id: number) => {
 
     const puntosFijos = await obtenerPuntuacionUsuario(id);
     const puntosIA = await obtenerPuntuacionusuarioIA(id);
+    const puntosGrupos = await obtenerPuntuacionGrupos(id);
 
     return {
         id,
@@ -287,7 +308,7 @@ export const obtenerPerfilCompleto = async (id: number) => {
         edad: usuario.edad,
         rol: usuario.rol,
         avatarUrl: avatar ? avatar.url : null,
-        puntos: puntosFijos + puntosIA,
+        puntos: puntosFijos + puntosIA + puntosGrupos,
     };
 };
 

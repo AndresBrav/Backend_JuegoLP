@@ -46,7 +46,7 @@ const swaggerOptions: Options = {
                         idAvatar: { type: "integer", description: "Identificador del avatar asignado" },
                         rol: {
                             type: "string",
-                            enum: ["estudiante", "admin"],
+                            enum: ["estudiante", "profesor", "admin"],
                             description: "Rol del usuario",
                         },
                     },

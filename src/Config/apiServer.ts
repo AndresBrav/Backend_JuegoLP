@@ -8,6 +8,8 @@ import JuegosRoutes from "../Routes/juegosRoutes";
 import avataresRoutes from "../Routes/avataresRoutes";
 import notificacionRouter from "../Routes/notificacionesRoutes";
 import adminRoutes from "../Routes/adminRoutes";
+import profesorRoutes from "../Routes/profesorRoutes";
+import estudianteRoutes from "../Routes/estudianteRoutes";
 
 import morgan from "morgan";
 // actualizado
@@ -26,6 +28,8 @@ class ApiServer {
     private avataresPath: string;
     private notificationPath: string;
     private adminPath: string;
+    private profesorPath: string;
+    private estudiantePath: string;
     private apiDocsPath: string;
 
     constructor() {
@@ -36,6 +40,8 @@ class ApiServer {
         this.avataresPath = "/avatares";
         this.notificationPath = "/notificaciones";
         this.adminPath = "/admin";
+        this.profesorPath = "/profesor";
+        this.estudiantePath = "/estudiante";
         this.apiDocsPath = "/api-docs";
         this.middlewares(); // Llama a la función middleware
         this.routes(); // Registra las rutas
@@ -71,6 +77,8 @@ class ApiServer {
         this.app.use(this.avataresPath, avataresRoutes);
         this.app.use(this.notificationPath, notificacionRouter);
         this.app.use(this.adminPath, adminRoutes);
+        this.app.use(this.profesorPath, profesorRoutes);
+        this.app.use(this.estudiantePath, estudianteRoutes);
     }
 
     public escuchar(): void {

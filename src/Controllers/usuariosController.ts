@@ -35,6 +35,7 @@ import { miProgresoEstudiante } from "../Services/reporteServices";
 import {
     esCodigoValido,
     normalizarCodigo,
+    esRolDeRegistro,
 } from "../Validations/validaciones";
 
 /** Firma el JWT, lo cifra y devuelve el token que consume el cliente. */
@@ -423,7 +424,7 @@ const borrar = async (req: Request, res: Response) => {
  */
 const RegistrarLogin = async (req: Request, res: Response) => {
     try {
-        const { codigo, username, edad, password } = req.body ?? {};
+        const { codigo, username, edad, password, rol } = req.body ?? {};
 
         if (!codigo || !username || !edad || !password) {
             res.status(400).json({ message: "Faltan datos en la solicitud" });
@@ -482,7 +483,9 @@ const RegistrarLogin = async (req: Request, res: Response) => {
             username: usernameNormalizado,
             edad: edadNumero,
             password: String(password),
-            rol: "estudiante",
+            // El rol se elige en el registro (estudiante o profesor);
+            // admin sigue fuera del registro público.
+            rol: esRolDeRegistro(rol) ? rol : "estudiante",
         });
 
         res.status(201).json({ token: firmarToken(usuario) });
