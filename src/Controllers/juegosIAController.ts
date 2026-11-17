@@ -1,6 +1,15 @@
-import { Request, Response } from "express";
-import verifyToken, { AuthenticatedRequest } from "../Middlewares/verifyToken";
+import { Response } from "express";
+import { AuthenticatedRequest } from "../Middlewares/verifyToken";
+import { RequestAutenticado } from "../Middlewares/cargarUsuarioActual";
 import { obtenerUnUsuarioServicio } from "../Services/usuarioServices";
+import { obtenerCuotaGeneracionIA } from "../Services/cuotaGeneracionIAServicio";
+import {
+    CuotaGeneracionAgotadaError,
+    GeminiNoConfiguradoError,
+    generarEjercicioIA,
+    TemarioGeneracionInvalidoError,
+} from "../Services/generacionIAService";
+import type { TipoGeneracionIA } from "../Services/generacionIAService";
 import {
     obtenerTodosLosJuegosIA,
     guardarJuegoIA,
@@ -11,6 +20,190 @@ import {
     reiniciarEstadoTableroJuegoIA,
     obtenerTemariosIA,
 } from "../Services/juegosiaServicios";
+
+/**
+ * @swagger
+ * /juegos/cuota-generacion-ia:
+ *   get:
+ *     tags: [Juegos IA]
+ *     summary: Consultar el uso diario de generación IA del estudiante
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cuota diaria actual; es null para roles sin límite
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cuota:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     limite:
+ *                       type: integer
+ *                       example: 10
+ *                     usados:
+ *                       type: integer
+ *                     restantes:
+ *                       type: integer
+ *                     fecha:
+ *                       type: string
+ *                       format: date
+ *       401:
+ *         description: Usuario no autenticado
+ *       500:
+ *         description: Error al consultar la cuota
+ */
+const obtenerCuotaGeneracionIAController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    try {
+        if (!req.usuarioActual) {
+            res.status(401).json({ msg: "Usuario no autenticado" });
+            return;
+        }
+
+        const cuota =
+            req.usuarioActual.rol === "estudiante"
+                ? await obtenerCuotaGeneracionIA(req.usuarioActual.id)
+                : null;
+        res.json({ cuota });
+    } catch (error) {
+        console.error("Error al consultar cuota de generación IA:", error);
+        res.status(500).json({ msg: "No se pudo consultar la cuota diaria." });
+    }
+};
+
+/**
+ * @swagger
+ * /juegos/generar-ejercicio-ia:
+ *   post:
+ *     tags: [Juegos IA]
+ *     summary: Generar un ejercicio de diagrama o pseudocódigo con IA
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tipo_juego]
+ *             properties:
+ *               tipo_juego:
+ *                 type: string
+ *                 enum: [ia, iapseudo]
+ *               temario_id:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Ejercicio generado y cuota actualizada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ejercicio:
+ *                   type: string
+ *                 cuota:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     limite:
+ *                       type: integer
+ *                     usados:
+ *                       type: integer
+ *                     restantes:
+ *                       type: integer
+ *                     fecha:
+ *                       type: string
+ *                       format: date
+ *       400:
+ *         description: Tipo de ejercicio o temario no válido
+ *       429:
+ *         description: Se alcanzó el límite diario de 10 generaciones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                 cuota:
+ *                   type: object
+ *                   properties:
+ *                     limite:
+ *                       type: integer
+ *                     usados:
+ *                       type: integer
+ *                     restantes:
+ *                       type: integer
+ *                     fecha:
+ *                       type: string
+ *                       format: date
+ *       502:
+ *         description: No se pudo obtener un ejercicio de Gemini
+ */
+const generarEjercicioIAController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    if (!req.usuarioActual) {
+        res.status(401).json({ msg: "Usuario no autenticado" });
+        return;
+    }
+
+    const tipo: TipoGeneracionIA = req.body?.tipo_juego;
+    if (tipo !== "ia" && tipo !== "iapseudo") {
+        res.status(400).json({ msg: "tipo_juego debe ser ia o iapseudo." });
+        return;
+    }
+
+    let temarioId: number | undefined;
+    if (req.body?.temario_id !== undefined && req.body.temario_id !== null) {
+        temarioId = Number(req.body.temario_id);
+        if (!Number.isInteger(temarioId) || temarioId <= 0) {
+            res.status(400).json({ msg: "temario_id no es válido." });
+            return;
+        }
+    }
+
+    try {
+        const resultado = await generarEjercicioIA(
+            req.usuarioActual.id,
+            req.usuarioActual.rol,
+            tipo,
+            temarioId,
+        );
+        res.json(resultado);
+    } catch (error) {
+        if (error instanceof CuotaGeneracionAgotadaError) {
+            res.status(429).json({
+                msg: error.message,
+                cuota: error.cuota,
+            });
+            return;
+        }
+
+        if (error instanceof TemarioGeneracionInvalidoError) {
+            res.status(400).json({ msg: error.message });
+            return;
+        }
+
+        if (error instanceof GeminiNoConfiguradoError) {
+            res.status(500).json({ msg: error.message });
+            return;
+        }
+
+        console.error("Error al generar ejercicio con IA:", error);
+        res.status(502).json({
+            msg: "No se pudo generar el ejercicio. Intenta de nuevo.",
+        });
+    }
+};
 
 /**
  * @swagger
@@ -530,6 +723,8 @@ const reiniciarEstadoTableroController = async (
 };
 
 export {
+    obtenerCuotaGeneracionIAController,
+    generarEjercicioIAController,
     traerTemariosIAController,
     traerJuegosController,
     guardarJuegoIAController,

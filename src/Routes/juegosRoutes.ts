@@ -1,5 +1,6 @@
 import express from "express";
 import verifyToken from "../Middlewares/verifyToken";
+import cargarUsuarioActual from "../Middlewares/cargarUsuarioActual";
 import {
     consultarJuegos,
     obtenerEstadoJuegoController,
@@ -16,6 +17,8 @@ import {
     guardarEstadoTableroController,
     reiniciarEstadoTableroController,
     traerTemariosIAController,
+    obtenerCuotaGeneracionIAController,
+    generarEjercicioIAController,
 } from "../Controllers/juegosIAController";
 
 const router = express.Router();
@@ -28,6 +31,20 @@ router.put("/reiniciarEstado/:id", verifyToken, reiniciarEstadoJuegoController);
 
 // obtener la API key de Gemini para el cliente autenticado
 router.get("/gemini-key", verifyToken, obtenerGeminiKeyController);
+
+// cuota compartida entre generación de diagramas y pseudocódigo
+router.get(
+    "/cuota-generacion-ia",
+    verifyToken,
+    cargarUsuarioActual,
+    obtenerCuotaGeneracionIAController,
+);
+router.post(
+    "/generar-ejercicio-ia",
+    verifyToken,
+    cargarUsuarioActual,
+    generarEjercicioIAController,
+);
 
 // temarios globales de IA para clasificar ejercicios de pseudocódigo
 router.get("/temarios", verifyToken, traerTemariosIAController);
