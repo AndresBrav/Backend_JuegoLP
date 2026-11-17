@@ -6,6 +6,12 @@ export interface UsuarioEjerciciosGrupoAttributes {
     ejercicio_grupo_id?: number;
     usuario_id?: number;
     estado_tablero?: string | null;
+    resultado_casos_prueba?: Array<{
+        indice: number;
+        aprobado: boolean;
+        salida_obtenida: string[];
+        error: string | null;
+    }> | null;
     completado?: boolean;
     puntos?: number;
     calificado?: boolean;
@@ -48,6 +54,10 @@ const UsuarioEjerciciosGrupo = db.define<UsuarioEjerciciosGrupoInstance>(
         },
         estado_tablero: {
             type: DataTypes.TEXT("long"),
+            allowNull: true,
+        },
+        resultado_casos_prueba: {
+            type: DataTypes.JSON,
             allowNull: true,
         },
         completado: {

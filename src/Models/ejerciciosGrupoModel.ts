@@ -11,6 +11,10 @@ export interface EjerciciosGrupoAttributes {
     tipo?: "diagrama" | "pseudocodigo";
     puntos?: number;
     fecha_limite?: string | null;
+    casos_prueba?: Array<{
+        entradas: string[];
+        salidas_esperadas: string[];
+    }> | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -66,6 +70,10 @@ const EjerciciosGrupo = db.define<EjerciciosGrupoInstance>(
         },
         fecha_limite: {
             type: DataTypes.DATEONLY,
+            allowNull: true,
+        },
+        casos_prueba: {
+            type: DataTypes.JSON,
             allowNull: true,
         },
     },

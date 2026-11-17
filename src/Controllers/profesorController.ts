@@ -297,7 +297,8 @@ export const listarEjerciciosController = async (
  *   post:
  *     tags: [Profesor]
  *     summary: Crear ejercicio (título, enunciado, tipo, puntos,
- *       fecha_limite opcional YYYY-MM-DD, temario_id)
+ *       casos_prueba opcionales, fecha_limite opcional YYYY-MM-DD,
+ *       temario_id)
  *     security:
  *       - BearerAuth: []
  */

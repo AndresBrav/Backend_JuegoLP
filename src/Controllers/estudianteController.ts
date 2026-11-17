@@ -197,8 +197,8 @@ export const guardarEstadoController = async (
  * /estudiante/grupos/{id}/ejercicios/{ejercicioId}/completar:
  *   post:
  *     tags: [Estudiante]
- *     summary: Entregar el ejercicio (NO otorga puntos; el profesor
- *       califica después; bloqueado si venció)
+ *     summary: Entregar el ejercicio con resultados reportados de casos
+ *       de prueba (NO otorga puntos; bloqueado si venció)
  *     security:
  *       - BearerAuth: []
  */
@@ -207,12 +207,13 @@ export const completarEjercicioController = async (
     res: Response,
 ) => {
     try {
-        const { estado_tablero } = req.body ?? {};
+        const { estado_tablero, resultado_casos_prueba } = req.body ?? {};
         const r = await completarEjercicioEstudiante(
             idNumerico(req.params.id),
             idNumerico(req.params.ejercicioId),
             req.usuarioActual.id,
             estado_tablero,
+            resultado_casos_prueba,
         );
         res.json(r);
     } catch (err) {

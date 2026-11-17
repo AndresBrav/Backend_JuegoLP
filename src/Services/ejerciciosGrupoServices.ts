@@ -11,6 +11,18 @@ import { temarioDelProfesor, esErrorNegocio } from "./temariosGrupoServices";
 
 export type TipoEjercicioGrupo = "diagrama" | "pseudocodigo";
 
+export interface CasoPruebaGrupo {
+    entradas: string[];
+    salidas_esperadas: string[];
+}
+
+export interface ResultadoCasoPruebaGrupo {
+    indice: number;
+    aprobado: boolean;
+    salida_obtenida: string[];
+    error: string | null;
+}
+
 export { esErrorNegocio };
 
 /** ¿El ejercicio ya pasó su fecha límite? (NULL = sin límite). */
@@ -79,9 +91,117 @@ interface EjerciciosGrupoAttributesRaw {
     tipo: TipoEjercicioGrupo;
     puntos: number;
     fecha_limite: string | null;
+    casos_prueba: CasoPruebaGrupo[] | null;
     createdAt: Date;
     updatedAt: Date;
 }
+
+const MAX_CASOS_PRUEBA = 20;
+const MAX_LINEAS_CASO = 20;
+const MAX_LONGITUD_LINEA_CASO = 500;
+
+const validarLineasCaso = (valor: any, campo: string): string[] => {
+    if (!Array.isArray(valor) || valor.length > MAX_LINEAS_CASO) {
+        throw new Error(
+            `${campo} debe ser una lista de hasta ${MAX_LINEAS_CASO} líneas`,
+        );
+    }
+
+    return valor.map((linea, indice) => {
+        if (
+            typeof linea !== "string" ||
+            linea.length > MAX_LONGITUD_LINEA_CASO
+        ) {
+            throw new Error(
+                `${campo}, línea ${indice + 1}: debe ser texto de hasta ${MAX_LONGITUD_LINEA_CASO} caracteres`,
+            );
+        }
+        return linea;
+    });
+};
+
+const validarCasosPrueba = (valor: any): CasoPruebaGrupo[] => {
+    if (valor === undefined || valor === null) return [];
+    if (!Array.isArray(valor) || valor.length > MAX_CASOS_PRUEBA) {
+        throw new Error(
+            `Los casos de prueba deben ser una lista de hasta ${MAX_CASOS_PRUEBA} casos`,
+        );
+    }
+
+    const casos = valor.map((caso, indice) => {
+        if (!caso || typeof caso !== "object" || Array.isArray(caso)) {
+            throw new Error(`El caso de prueba ${indice + 1} es inválido`);
+        }
+        const entradas = validarLineasCaso(
+            caso.entradas,
+            `Entradas del caso ${indice + 1}`,
+        );
+        const salidasEsperadas = validarLineasCaso(
+            caso.salidas_esperadas,
+            `Salidas del caso ${indice + 1}`,
+        );
+        if (salidasEsperadas.length === 0) {
+            throw new Error(
+                `El caso de prueba ${indice + 1} debe tener al menos una salida esperada`,
+            );
+        }
+        return {
+            entradas,
+            salidas_esperadas: salidasEsperadas,
+        };
+    });
+
+    if (JSON.stringify(casos).length > 50000) {
+        throw new Error("Los casos de prueba exceden el tamaño permitido");
+    }
+    return casos;
+};
+
+const validarResultadosCasosPrueba = (
+    valor: any,
+    casos: CasoPruebaGrupo[],
+): ResultadoCasoPruebaGrupo[] | null => {
+    if (valor === undefined || valor === null) return null;
+    if (!Array.isArray(valor) || valor.length !== casos.length) {
+        throw new Error("El resultado de los casos de prueba es inválido");
+    }
+
+    const resultados = valor.map((resultado, indice) => {
+        if (
+            !resultado ||
+            typeof resultado !== "object" ||
+            resultado.indice !== indice ||
+            typeof resultado.aprobado !== "boolean"
+        ) {
+            throw new Error("El resultado de los casos de prueba es inválido");
+        }
+        const salidaObtenida = validarLineasCaso(
+            resultado.salida_obtenida,
+            `Salida obtenida del caso ${indice + 1}`,
+        );
+        const error =
+            resultado.error === undefined || resultado.error === null
+                ? null
+                : resultado.error;
+        if (
+            error !== null &&
+            (typeof error !== "string" || error.length > 500)
+        ) {
+            throw new Error("El mensaje de error del caso de prueba es inválido");
+        }
+        return {
+            indice,
+            aprobado: resultado.aprobado,
+            salida_obtenida: salidaObtenida,
+            error,
+        };
+    });
+
+    if (JSON.stringify(resultados).length > 50000) {
+        throw new Error("El reporte de los casos de prueba excede el tamaño permitido");
+    }
+    return resultados;
+};
 
 /** Profesor: crea un ejercicio dentro de un temario de su grupo y
  * notifica a los estudiantes inscritos. */
@@ -95,6 +215,7 @@ export const crearEjercicioGrupo = async (
         tipo: any;
         puntos: any;
         fecha_limite: any;
+        casos_prueba?: any;
     },
 ) => {
     const { grupo_id, temario_id, titulo, enunciado, tipo, puntos } = datos;
@@ -132,6 +253,7 @@ export const crearEjercicioGrupo = async (
     }
 
     const fechaLimite = validarFechaLimite(datos.fecha_limite);
+    const casosPrueba = validarCasosPrueba(datos.casos_prueba);
 
     const ejercicio = await EjerciciosGrupo.create({
         grupo_id,
@@ -141,6 +263,7 @@ export const crearEjercicioGrupo = async (
         tipo,
         puntos: puntosFinal,
         fecha_limite: fechaLimite,
+        casos_prueba: casosPrueba.length > 0 ? casosPrueba : null,
     });
 
     // Notificación a los estudiantes inscritos en el grupo.
@@ -286,6 +409,7 @@ export const listarSolucionesEjercicio = async (
         id: number;
         usuario_id: number;
         estado_tablero: string | null;
+        resultado_casos_prueba: ResultadoCasoPruebaGrupo[] | null;
         completado: boolean;
         puntos: number;
         calificado: boolean;
@@ -591,6 +715,7 @@ export const completarEjercicioEstudiante = async (
     ejercicioId: number,
     estudianteId: number,
     estadoTablero: any,
+    resultadoCasosPrueba: any,
 ) => {
     const ejercicio = (await EjerciciosGrupo.findOne({
         where: { id: ejercicioId, grupo_id: grupoId },
@@ -618,12 +743,19 @@ export const completarEjercicioEstudiante = async (
         }
     }
 
+    const casosPrueba = validarCasosPrueba(ejercicio.casos_prueba);
+    const resultadosValidados = validarResultadosCasosPrueba(
+        resultadoCasosPrueba,
+        casosPrueba,
+    );
+
     const [entrega] = await UsuarioEjerciciosGrupo.findOrCreate({
         where: { ejercicio_grupo_id: ejercicioId, usuario_id: estudianteId },
         defaults: {
             estado_tablero: null,
             completado: false,
             puntos: 0,
+            resultado_casos_prueba: null,
         },
     });
 
@@ -634,6 +766,7 @@ export const completarEjercicioEstudiante = async (
                 typeof estadoTablero === "string"
                     ? estadoTablero
                     : entrega.estado_tablero,
+            resultado_casos_prueba: resultadosValidados,
             ultima_actividad: new Date(),
         });
         return {
@@ -650,6 +783,7 @@ export const completarEjercicioEstudiante = async (
             typeof estadoTablero === "string"
                 ? estadoTablero
                 : entrega.estado_tablero,
+        resultado_casos_prueba: resultadosValidados,
         completado: true,
         fecha_completado: new Date(),
         ultima_actividad: new Date(),
