@@ -198,7 +198,7 @@ export const crearTemarioController = async (
  * /profesor/grupos/{id}/temarios/reordenar:
  *   put:
  *     tags: [Profesor]
- *     summary: Reordenar temarios (body: { ids: number[] } en el orden final)
+ *     summary: "Reordenar temarios (body: { ids: number[] } en el orden final)"
  *     security:
  *       - BearerAuth: []
  */
