@@ -395,8 +395,8 @@ export const listarSolucionesController = async (
  * /profesor/ejercicios/{id}/calificar/{estudianteId}:
  *   put:
  *     tags: [Profesor]
- *     summary: Calificar la entrega de un estudiante (puntos 0-100 y
- *       comentario opcional). Afecta SOLO al par ejercicio+estudiante.
+ *     summary: Calificar una entrega hasta el puntaje máximo del ejercicio
+ *     description: La calificación afecta SOLO al par ejercicio+estudiante. El comentario es opcional.
  *     security:
  *       - BearerAuth: []
  */

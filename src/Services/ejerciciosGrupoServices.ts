@@ -347,6 +347,11 @@ export const calificarEntrega = async (
     if (!Number.isInteger(puntos) || puntos < 0 || puntos > 100) {
         throw new Error("Los puntos de calificación deben ser 0 a 100");
     }
+    if (puntos > ejercicio.puntos) {
+        throw new Error(
+            `Los puntos de calificación no pueden superar los ${ejercicio.puntos} puntos máximos del ejercicio`,
+        );
+    }
 
     if (comentario !== undefined && comentario !== null && typeof comentario !== "string") {
         throw new Error("El comentario debe ser texto");

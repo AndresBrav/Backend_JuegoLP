@@ -19,6 +19,7 @@ export const esErrorNegocio = (err: unknown): boolean => {
         "debe tener",
         "obligatorio",
         "inválido",
+        "Los puntos",
         "No estás inscrito",
     ].some((f) => msg.includes(f));
 };
