@@ -21,6 +21,7 @@ import {
     guardarComentarioController,
     rankingGrupoController,
 } from "../Controllers/profesorController";
+import { reporteGrupoController } from "../Controllers/reporteGrupoController";
 
 const router = Router();
 
@@ -57,5 +58,16 @@ router.put(
 
 // Ranking del grupo
 router.get("/grupos/:id/ranking", rankingGrupoController);
+
+/**
+ * @swagger
+ * /profesor/grupos/{id}/reporte:
+ *   get:
+ *     tags: [Profesor]
+ *     summary: Reporte de avance de los estudiantes de un grupo propio
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get("/grupos/:id/reporte", reporteGrupoController);
 
 export default router;

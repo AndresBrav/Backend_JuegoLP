@@ -1,8 +1,362 @@
+import { Op } from "sequelize";
+import Grupo from "../Models/grupoModel";
+import GrupoEstudiantes from "../Models/grupoEstudianteModel";
+import EjerciciosGrupo from "../Models/ejerciciosGrupoModel";
+import TemariosGrupo from "../Models/temariosGrupoModel";
+import UsuarioEjerciciosGrupo from "../Models/usuario_ejerciciosGrupoModel";
 import Juegos from "../Models/juegoModel";
 import UsuarioJuegos from "../Models/usuario_juegosModel";
 import JuegosIA from "../Models/juegos_iaModel";
 import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
 import Usuarios from "../Models/usuarioModel";
+import { Rol } from "../interfaces/Usuario";
+
+interface EjercicioReporte {
+    id: number;
+    titulo: string;
+    temario_id: number;
+    puntos: number;
+    fecha_limite: string | null;
+}
+
+interface EntregaReporte {
+    ejercicio_grupo_id: number;
+    usuario_id: number;
+    estado_tablero: string | null;
+    completado: boolean;
+    calificado: boolean;
+    puntos_profesor: number | null;
+    ultima_actividad: Date | string | null;
+}
+
+interface MetricasReporte {
+    ejerciciosTotales: number;
+    completados: number;
+    enProgreso: number;
+    sinIniciar: number;
+    calificados: number;
+    pendientesCalificar: number;
+    puntosCalificados: number;
+    puntosMaximosCalificados: number;
+    avancePorcentaje: number;
+    ultimaActividad: string | null;
+}
+
+const esVerdadero = (valor: unknown): boolean =>
+    valor === true || valor === 1 || valor === "1";
+
+const fechaIso = (valor: Date | string | null): string | null => {
+    if (!valor) return null;
+    const fecha = new Date(valor);
+    return Number.isNaN(fecha.getTime()) ? null : fecha.toISOString();
+};
+
+const resumirEntregas = (
+    ejercicios: EjercicioReporte[],
+    usuarioId: number,
+    entregas: Map<string, EntregaReporte>,
+): MetricasReporte => {
+    let completados = 0;
+    let enProgreso = 0;
+    let sinIniciar = 0;
+    let calificados = 0;
+    let pendientesCalificar = 0;
+    let puntosCalificados = 0;
+    let puntosMaximosCalificados = 0;
+    let ultimaActividad: string | null = null;
+
+    for (const ejercicio of ejercicios) {
+        const entrega = entregas.get(`${usuarioId}:${ejercicio.id}`);
+        if (!entrega) {
+            sinIniciar += 1;
+            continue;
+        }
+
+        const completado = esVerdadero(entrega.completado);
+        const calificado = esVerdadero(entrega.calificado);
+        const actividad = fechaIso(entrega.ultima_actividad);
+        const iniciada =
+            completado ||
+            Boolean(entrega.estado_tablero?.trim()) ||
+            actividad !== null;
+
+        if (completado) {
+            completados += 1;
+        } else if (iniciada) {
+            enProgreso += 1;
+        } else {
+            sinIniciar += 1;
+        }
+
+        if (calificado) {
+            calificados += 1;
+            puntosCalificados += Number(entrega.puntos_profesor ?? 0);
+            puntosMaximosCalificados += Number(ejercicio.puntos);
+        } else if (completado) {
+            pendientesCalificar += 1;
+        }
+
+        if (
+            actividad &&
+            (!ultimaActividad ||
+                new Date(actividad).getTime() >
+                    new Date(ultimaActividad).getTime())
+        ) {
+            ultimaActividad = actividad;
+        }
+    }
+
+    return {
+        ejerciciosTotales: ejercicios.length,
+        completados,
+        enProgreso,
+        sinIniciar,
+        calificados,
+        pendientesCalificar,
+        puntosCalificados,
+        puntosMaximosCalificados,
+        avancePorcentaje: ejercicios.length
+            ? Math.round((completados / ejercicios.length) * 100)
+            : 0,
+        ultimaActividad,
+    };
+};
+
+/** Reporte de avance de un grupo; profesores solo consultan sus propios grupos. */
+export const reporteGrupo = async (
+    grupoId: number,
+    usuarioId: number,
+    rol: Rol,
+) => {
+    const grupo = (await Grupo.findByPk(grupoId, {
+        raw: true,
+    })) as unknown as {
+        id: number;
+        nombre: string;
+        profesor_id: number;
+        createdAt: Date;
+    } | null;
+
+    if (
+        !grupo ||
+        (rol === "profesor" &&
+            Number(grupo.profesor_id) !== Number(usuarioId))
+    ) {
+        return null;
+    }
+
+    const [profesor, temariosRaw, ejerciciosRaw, inscripcionesRaw] =
+        await Promise.all([
+            Usuarios.findByPk(grupo.profesor_id, {
+                attributes: ["id", "username"],
+                raw: true,
+            }) as Promise<{ id: number; username: string } | null>,
+            TemariosGrupo.findAll({
+                where: { grupo_id: grupoId },
+                attributes: ["id", "nombre", "orden"],
+                order: [["orden", "ASC"]],
+                raw: true,
+            }) as Promise<Array<{ id: number; nombre: string; orden: number }>>,
+            EjerciciosGrupo.findAll({
+                where: { grupo_id: grupoId },
+                attributes: [
+                    "id",
+                    "titulo",
+                    "temario_id",
+                    "puntos",
+                    "fecha_limite",
+                ],
+                order: [["createdAt", "ASC"]],
+                raw: true,
+            }) as Promise<EjercicioReporte[]>,
+            GrupoEstudiantes.findAll({
+                where: { grupo_id: grupoId },
+                attributes: ["usuario_id", "fecha_union"],
+                raw: true,
+            }) as Promise<Array<{ usuario_id: number; fecha_union: string }>>,
+        ]);
+
+    const estudianteIds = inscripcionesRaw.map((i) => Number(i.usuario_id));
+    const ejercicioIds = ejerciciosRaw.map((e) => Number(e.id));
+
+    const [estudiantesRaw, entregasRaw] = await Promise.all([
+        estudianteIds.length
+            ? (Usuarios.findAll({
+                  where: { id: { [Op.in]: estudianteIds } },
+                  attributes: ["id", "codigo", "username"],
+                  order: [["username", "ASC"]],
+                  raw: true,
+              }) as Promise<
+                  Array<{ id: number; codigo: string; username: string }>
+              >)
+            : Promise.resolve([]),
+        estudianteIds.length && ejercicioIds.length
+            ? (UsuarioEjerciciosGrupo.findAll({
+                  where: {
+                      usuario_id: { [Op.in]: estudianteIds },
+                      ejercicio_grupo_id: { [Op.in]: ejercicioIds },
+                  },
+                  attributes: [
+                      "ejercicio_grupo_id",
+                      "usuario_id",
+                      "estado_tablero",
+                      "completado",
+                      "calificado",
+                      "puntos_profesor",
+                      "ultima_actividad",
+                  ],
+                  raw: true,
+              }) as Promise<EntregaReporte[]>)
+            : Promise.resolve([]),
+    ]);
+
+    const temarioPorId = new Map(
+        temariosRaw.map((temario) => [Number(temario.id), temario]),
+    );
+    const inscripcionPorId = new Map(
+        inscripcionesRaw.map((inscripcion) => [
+            Number(inscripcion.usuario_id),
+            inscripcion.fecha_union,
+        ]),
+    );
+    const entregasPorEstudianteEjercicio = new Map<string, EntregaReporte>(
+        entregasRaw.map((entrega) => [
+            `${Number(entrega.usuario_id)}:${Number(entrega.ejercicio_grupo_id)}`,
+            entrega,
+        ]),
+    );
+
+    const estadisticasPorEjercicio = new Map(
+        ejerciciosRaw.map((ejercicio) => [
+            Number(ejercicio.id),
+            {
+                iniciados: 0,
+                completados: 0,
+                enProgreso: 0,
+                sinIniciar: 0,
+                calificados: 0,
+                pendientesCalificar: 0,
+            },
+        ]),
+    );
+
+    const estudiantes = estudiantesRaw.map((estudiante) => {
+        const id = Number(estudiante.id);
+        const metricas = resumirEntregas(
+            ejerciciosRaw,
+            id,
+            entregasPorEstudianteEjercicio,
+        );
+        const porTemario = temariosRaw.map((temario) => ({
+            temario_id: Number(temario.id),
+            ...resumirEntregas(
+                ejerciciosRaw.filter(
+                    (ejercicio) =>
+                        Number(ejercicio.temario_id) === Number(temario.id),
+                ),
+                id,
+                entregasPorEstudianteEjercicio,
+            ),
+        }));
+
+        for (const ejercicio of ejerciciosRaw) {
+            const estadisticas = estadisticasPorEjercicio.get(
+                Number(ejercicio.id),
+            );
+            if (!estadisticas) continue;
+
+            const entrega = entregasPorEstudianteEjercicio.get(
+                `${id}:${Number(ejercicio.id)}`,
+            );
+            if (!entrega) {
+                estadisticas.sinIniciar += 1;
+                continue;
+            }
+
+            const completado = esVerdadero(entrega.completado);
+            const calificado = esVerdadero(entrega.calificado);
+            const actividad = fechaIso(entrega.ultima_actividad);
+            const iniciada =
+                completado ||
+                Boolean(entrega.estado_tablero?.trim()) ||
+                actividad !== null;
+            if (completado) {
+                estadisticas.iniciados += 1;
+                estadisticas.completados += 1;
+            } else if (iniciada) {
+                estadisticas.iniciados += 1;
+                estadisticas.enProgreso += 1;
+            } else {
+                estadisticas.sinIniciar += 1;
+            }
+            if (calificado) {
+                estadisticas.calificados += 1;
+            } else if (completado) {
+                estadisticas.pendientesCalificar += 1;
+            }
+        }
+
+        return {
+            id,
+            codigo: estudiante.codigo,
+            username: estudiante.username,
+            fecha_union: inscripcionPorId.get(id) ?? null,
+            ...metricas,
+            porTemario,
+        };
+    });
+
+    const tareasPosibles = estudiantes.length * ejerciciosRaw.length;
+    const completados = estudiantes.reduce(
+        (total, estudiante) => total + estudiante.completados,
+        0,
+    );
+    const enProgreso = estudiantes.reduce(
+        (total, estudiante) => total + estudiante.enProgreso,
+        0,
+    );
+    const pendientesCalificar = estudiantes.reduce(
+        (total, estudiante) => total + estudiante.pendientesCalificar,
+        0,
+    );
+    const calificados = estudiantes.reduce(
+        (total, estudiante) => total + estudiante.calificados,
+        0,
+    );
+
+    return {
+        grupo: {
+            id: Number(grupo.id),
+            nombre: grupo.nombre,
+            createdAt: grupo.createdAt,
+            profesor: {
+                id: Number(profesor?.id ?? grupo.profesor_id),
+                username: profesor?.username ?? "desconocido",
+            },
+        },
+        resumen: {
+            estudiantes: estudiantes.length,
+            ejercicios: ejerciciosRaw.length,
+            tareasPosibles,
+            completados,
+            enProgreso,
+            sinIniciar: tareasPosibles - completados - enProgreso,
+            calificados,
+            pendientesCalificar,
+            avancePorcentaje: tareasPosibles
+                ? Math.round((completados / tareasPosibles) * 100)
+                : 0,
+        },
+        temarios: temariosRaw,
+        ejercicios: ejerciciosRaw.map((ejercicio) => ({
+            ...ejercicio,
+            temario:
+                temarioPorId.get(Number(ejercicio.temario_id))?.nombre ?? "",
+            ...estadisticasPorEjercicio.get(Number(ejercicio.id)),
+        })),
+        estudiantes,
+    };
+};
 
 /** true para completado en cualquiera de sus variantes (true/1/"1"). */
 const estaCompletado = (valor: any): boolean =>

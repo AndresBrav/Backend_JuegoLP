@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { RequestAutenticado } from "../Middlewares/cargarUsuarioActual";
-import { listarEstudiantes } from "../Services/adminServices";
+import { listarEstudiantes, listarGruposAdmin } from "../Services/adminServices";
 import { estadisticasGlobales } from "../Services/reporteServices";
 
 /**
@@ -52,5 +52,18 @@ export const estadisticasController = async (
     } catch (error: any) {
         console.error("ERROR estadisticasController:", error);
         res.status(500).json({ message: "No se pudieron calcular las estadísticas" });
+    }
+};
+
+export const listarGruposAdminController = async (
+    _req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    try {
+        const grupos = await listarGruposAdmin();
+        res.json(grupos);
+    } catch (error) {
+        console.error("ERROR listarGruposAdminController:", error);
+        res.status(500).json({ message: "No se pudieron listar los grupos" });
     }
 };
