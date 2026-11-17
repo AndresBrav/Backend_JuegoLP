@@ -1,6 +1,7 @@
 import { Transaction } from "sequelize";
 import db from "../db/conexion";
 import UsoGeneracionIA from "../Models/usoGeneracionIAModel";
+import { obtenerFechaLocalBolivia } from "../utils/fechaLocal";
 
 export const LIMITE_GENERACIONES_DIARIAS = 5;
 
@@ -10,19 +11,6 @@ export interface CuotaGeneracionIA {
     restantes: number;
     fecha: string;
 }
-
-const obtenerFechaLocal = (): string => {
-    const partes = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "America/La_Paz",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).formatToParts(new Date());
-    const obtenerParte = (tipo: string) =>
-        partes.find((parte) => parte.type === tipo)?.value ?? "";
-
-    return `${obtenerParte("year")}-${obtenerParte("month")}-${obtenerParte("day")}`;
-};
 
 const crearCuota = (fecha: string, usados: number): CuotaGeneracionIA => ({
     limite: LIMITE_GENERACIONES_DIARIAS,
@@ -34,7 +22,7 @@ const crearCuota = (fecha: string, usados: number): CuotaGeneracionIA => ({
 export const obtenerCuotaGeneracionIA = async (
     usuarioId: number,
 ): Promise<CuotaGeneracionIA> => {
-    const fecha = obtenerFechaLocal();
+    const fecha = obtenerFechaLocalBolivia();
     const uso = await UsoGeneracionIA.findOne({
         attributes: ["cantidad"],
         where: { usuario_id: usuarioId, fecha_local: fecha },
@@ -46,7 +34,7 @@ export const obtenerCuotaGeneracionIA = async (
 export const consumirGeneracionIA = async (
     usuarioId: number,
 ): Promise<{ permitida: boolean; cuota: CuotaGeneracionIA }> => {
-    const fecha = obtenerFechaLocal();
+    const fecha = obtenerFechaLocalBolivia();
     const transaccion = await db.transaction({
         isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
     });

@@ -12,13 +12,15 @@ import {
     guardarJuegoIAController,
     traerJuegosControllerPseudo,
     completarJuegoController,
-    obtenerGeminiKeyController,
     obtenerJuegoIAController,
     guardarEstadoTableroController,
     reiniciarEstadoTableroController,
     traerTemariosIAController,
     obtenerCuotaGeneracionIAController,
     generarEjercicioIAController,
+    obtenerCuotaRevisionIAController,
+    verificarDiagramaIAController,
+    verificarPseudocodigoIAController,
 } from "../Controllers/juegosIAController";
 
 const router = express.Router();
@@ -28,9 +30,6 @@ router.get("/consultar", verifyToken, consultarJuegos);
 router.get("/estado/:id", verifyToken, obtenerEstadoJuegoController);
 router.put("/guardarEstado/:id", verifyToken, guardarEstadoJuegoController);
 router.put("/reiniciarEstado/:id", verifyToken, reiniciarEstadoJuegoController);
-
-// obtener la API key de Gemini para el cliente autenticado
-router.get("/gemini-key", verifyToken, obtenerGeminiKeyController);
 
 // cuota compartida entre generación de diagramas y pseudocódigo
 router.get(
@@ -53,6 +52,26 @@ router.get("/temarios", verifyToken, traerTemariosIAController);
 router.get("/traerJuegosConIA", verifyToken, traerJuegosController);
 
 router.get("/traerJuegosConIAPseudo", verifyToken, traerJuegosControllerPseudo);
+
+// revisión IA con cuota diaria por ejercicio
+router.get(
+    "/ia/:id/cuota-revision",
+    verifyToken,
+    cargarUsuarioActual,
+    obtenerCuotaRevisionIAController,
+);
+router.post(
+    "/ia/:id/revisar-diagrama",
+    verifyToken,
+    cargarUsuarioActual,
+    verificarDiagramaIAController,
+);
+router.post(
+    "/ia/:id/revisar-pseudocodigo",
+    verifyToken,
+    cargarUsuarioActual,
+    verificarPseudocodigoIAController,
+);
 
 // obtener juego IA individual con estado de tablero
 router.get("/ia/:id", verifyToken, obtenerJuegoIAController);

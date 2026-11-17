@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import TemariosIA from "../Models/temariosIAModel";
 import {
     consumirGeneracionIA,
+    LIMITE_GENERACIONES_DIARIAS,
 } from "./cuotaGeneracionIAServicio";
 import type { CuotaGeneracionIA } from "./cuotaGeneracionIAServicio";
 
@@ -11,7 +12,9 @@ export class TemarioGeneracionInvalidoError extends Error {}
 
 export class CuotaGeneracionAgotadaError extends Error {
     constructor(public readonly cuota: CuotaGeneracionIA) {
-        super("Alcanzaste el límite de 10 generaciones diarias.");
+        super(
+            `Alcanzaste el límite de ${LIMITE_GENERACIONES_DIARIAS} generaciones diarias.`,
+        );
     }
 }
 

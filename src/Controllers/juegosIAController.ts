@@ -11,6 +11,16 @@ import {
 } from "../Services/generacionIAService";
 import type { TipoGeneracionIA } from "../Services/generacionIAService";
 import {
+    CuotaRevisionAgotadaError,
+    EjercicioRevisionNoEncontradoError,
+} from "../Services/cuotaRevisionIAServicio";
+import {
+    consultarCuotaRevisionIA,
+    SolucionRevisionInvalidaError,
+    verificarDiagramaIA,
+    verificarPseudocodigoIA,
+} from "../Services/verificacionIAService";
+import {
     obtenerTodosLosJuegosIA,
     guardarJuegoIA,
     obtenerTodosLosJuegosIAPseudo,
@@ -43,7 +53,7 @@ import {
  *                   properties:
  *                     limite:
  *                       type: integer
- *                       example: 10
+ *                       example: 5
  *                     usados:
  *                       type: integer
  *                     restantes:
@@ -124,7 +134,7 @@ const obtenerCuotaGeneracionIAController = async (
  *       400:
  *         description: Tipo de ejercicio o temario no válido
  *       429:
- *         description: Se alcanzó el límite diario de 10 generaciones
+ *         description: Se alcanzó el límite diario de 5 generaciones
  *         content:
  *           application/json:
  *             schema:
@@ -201,6 +211,231 @@ const generarEjercicioIAController = async (
         console.error("Error al generar ejercicio con IA:", error);
         res.status(502).json({
             msg: "No se pudo generar el ejercicio. Intenta de nuevo.",
+        });
+    }
+};
+
+/**
+ * @swagger
+ * /juegos/ia/{id}/cuota-revision:
+ *   get:
+ *     tags: [Juegos IA]
+ *     summary: Consultar los intentos de revisión restantes para un ejercicio IA
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Cuota diaria del ejercicio
+ *       404:
+ *         description: Ejercicio IA no encontrado
+ *       500:
+ *         description: Error al consultar la cuota
+ */
+const obtenerCuotaRevisionIAController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    if (!req.usuarioActual) {
+        res.status(401).json({ msg: "Usuario no autenticado" });
+        return;
+    }
+
+    const juegoId = Number(req.params.id);
+    if (!Number.isInteger(juegoId) || juegoId <= 0) {
+        res.status(400).json({ msg: "id de ejercicio no válido." });
+        return;
+    }
+
+    try {
+        const cuota = await consultarCuotaRevisionIA(
+            req.usuarioActual.id,
+            juegoId,
+        );
+        res.json({ cuota });
+    } catch (error) {
+        if (error instanceof EjercicioRevisionNoEncontradoError) {
+            res.status(404).json({ msg: error.message });
+            return;
+        }
+        console.error("Error al consultar cuota de revisión IA:", error);
+        res.status(500).json({ msg: "No se pudo consultar la cuota diaria." });
+    }
+};
+
+/**
+ * @swagger
+ * /juegos/ia/{id}/revisar-diagrama:
+ *   post:
+ *     tags: [Juegos IA]
+ *     summary: Revisar con IA el diagrama de un ejercicio propio
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [diagrama]
+ *             properties:
+ *               diagrama:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Resultado de revisión y cuota actualizada
+ *       400:
+ *         description: Diagrama no válido
+ *       404:
+ *         description: Ejercicio IA no encontrado
+ *       429:
+ *         description: Se alcanzaron los 5 intentos diarios de este ejercicio
+ *       502:
+ *         description: No se pudo obtener la revisión de Gemini
+ */
+const verificarDiagramaIAController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    if (!req.usuarioActual) {
+        res.status(401).json({ msg: "Usuario no autenticado" });
+        return;
+    }
+
+    const juegoId = Number(req.params.id);
+    if (!Number.isInteger(juegoId) || juegoId <= 0) {
+        res.status(400).json({ msg: "id de ejercicio no válido." });
+        return;
+    }
+
+    try {
+        const resultado = await verificarDiagramaIA(
+            req.usuarioActual.id,
+            juegoId,
+            req.body?.diagrama,
+        );
+        res.json(resultado);
+    } catch (error) {
+        if (error instanceof SolucionRevisionInvalidaError) {
+            res.status(400).json({ msg: error.message });
+            return;
+        }
+        if (error instanceof EjercicioRevisionNoEncontradoError) {
+            res.status(404).json({ msg: error.message });
+            return;
+        }
+        if (error instanceof CuotaRevisionAgotadaError) {
+            res.status(429).json({
+                msg: error.message,
+                cuota: error.cuota,
+            });
+            return;
+        }
+        if (error instanceof GeminiNoConfiguradoError) {
+            res.status(500).json({ msg: error.message });
+            return;
+        }
+
+        console.error("Error al verificar diagrama con IA:", error);
+        res.status(502).json({
+            msg: "No se pudo verificar el diagrama. Intenta de nuevo.",
+        });
+    }
+};
+
+/**
+ * @swagger
+ * /juegos/ia/{id}/revisar-pseudocodigo:
+ *   post:
+ *     tags: [Juegos IA]
+ *     summary: Revisar con IA el pseudocódigo de un ejercicio propio
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pseudocodigo]
+ *             properties:
+ *               pseudocodigo:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Resultado de revisión y cuota actualizada
+ *       400:
+ *         description: Pseudocódigo no válido
+ *       404:
+ *         description: Ejercicio IA no encontrado
+ *       429:
+ *         description: Se alcanzaron los 5 intentos diarios de este ejercicio
+ *       502:
+ *         description: No se pudo obtener la revisión de Gemini
+ */
+const verificarPseudocodigoIAController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    if (!req.usuarioActual) {
+        res.status(401).json({ msg: "Usuario no autenticado" });
+        return;
+    }
+
+    const juegoId = Number(req.params.id);
+    if (!Number.isInteger(juegoId) || juegoId <= 0) {
+        res.status(400).json({ msg: "id de ejercicio no válido." });
+        return;
+    }
+
+    try {
+        const resultado = await verificarPseudocodigoIA(
+            req.usuarioActual.id,
+            juegoId,
+            req.body?.pseudocodigo,
+        );
+        res.json(resultado);
+    } catch (error) {
+        if (error instanceof SolucionRevisionInvalidaError) {
+            res.status(400).json({ msg: error.message });
+            return;
+        }
+        if (error instanceof EjercicioRevisionNoEncontradoError) {
+            res.status(404).json({ msg: error.message });
+            return;
+        }
+        if (error instanceof CuotaRevisionAgotadaError) {
+            res.status(429).json({
+                msg: error.message,
+                cuota: error.cuota,
+            });
+            return;
+        }
+        if (error instanceof GeminiNoConfiguradoError) {
+            res.status(500).json({ msg: error.message });
+            return;
+        }
+
+        console.error("Error al verificar pseudocódigo con IA:", error);
+        res.status(502).json({
+            msg: "No se pudo verificar el pseudocódigo. Intenta de nuevo.",
         });
     }
 };
@@ -520,20 +755,6 @@ const completarJuegoController = async (
     }
 };
 
-const obtenerGeminiKeyController = async (
-    _req: AuthenticatedRequest,
-    res: Response,
-) => {
-    try {
-        const apiKey = process.env.GEMINI_API_KEY || "";
-        res.json({ apiKey });
-    } catch (err) {
-        if (err instanceof Error) {
-            res.status(500).send(err.message);
-        }
-    }
-};
-
 /**
  * @swagger
  * /juegos/ia/{id}:
@@ -725,12 +946,14 @@ const reiniciarEstadoTableroController = async (
 export {
     obtenerCuotaGeneracionIAController,
     generarEjercicioIAController,
+    obtenerCuotaRevisionIAController,
+    verificarDiagramaIAController,
+    verificarPseudocodigoIAController,
     traerTemariosIAController,
     traerJuegosController,
     guardarJuegoIAController,
     completarJuegoController,
     traerJuegosControllerPseudo,
-    obtenerGeminiKeyController,
     obtenerJuegoIAController,
     guardarEstadoTableroController,
     reiniciarEstadoTableroController,
