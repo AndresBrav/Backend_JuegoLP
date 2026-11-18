@@ -17,6 +17,8 @@ interface EjercicioReporte {
     temario_id: number;
     puntos: number;
     fecha_limite: string | null;
+    tipo: "diagrama" | "pseudocodigo";
+    createdAt: Date | string;
 }
 
 interface EntregaReporte {
@@ -25,7 +27,10 @@ interface EntregaReporte {
     estado_tablero: string | null;
     completado: boolean;
     calificado: boolean;
+    puntos: number;
     puntos_profesor: number | null;
+    comentario_profesor: string | null;
+    fecha_completado: Date | string | null;
     ultima_actividad: Date | string | null;
 }
 
@@ -165,6 +170,8 @@ export const reporteGrupo = async (
                     "temario_id",
                     "puntos",
                     "fecha_limite",
+                    "tipo",
+                    "createdAt",
                 ],
                 order: [["createdAt", "ASC"]],
                 raw: true,
@@ -202,7 +209,10 @@ export const reporteGrupo = async (
                       "estado_tablero",
                       "completado",
                       "calificado",
+                      "puntos",
                       "puntos_profesor",
+                      "comentario_profesor",
+                      "fecha_completado",
                       "ultima_actividad",
                   ],
                   raw: true,
@@ -355,6 +365,21 @@ export const reporteGrupo = async (
             ...estadisticasPorEjercicio.get(Number(ejercicio.id)),
         })),
         estudiantes,
+        entregas: entregasRaw.map((entrega) => ({
+            ejercicio_id: Number(entrega.ejercicio_grupo_id),
+            usuario_id: Number(entrega.usuario_id),
+            estado_tablero: entrega.estado_tablero,
+            completado: esVerdadero(entrega.completado),
+            calificado: esVerdadero(entrega.calificado),
+            puntos: Number(entrega.puntos ?? 0),
+            puntos_profesor:
+                entrega.puntos_profesor === null
+                    ? null
+                    : Number(entrega.puntos_profesor),
+            comentario_profesor: entrega.comentario_profesor ?? null,
+            fecha_completado: fechaIso(entrega.fecha_completado),
+            ultima_actividad: fechaIso(entrega.ultima_actividad),
+        })),
     };
 };
 
