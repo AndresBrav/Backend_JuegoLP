@@ -11,7 +11,7 @@ interface UsuariosAttributes {
     codigo?: string;
     username?: string;
     edad?: number;
-    password?: string;
+    passwordHash?: string;
     idAvatar?: number;
     rol?: Rol;
 }
@@ -42,9 +42,10 @@ const Usuarios = db.define<UsuariosInstance>(
             type: DataTypes.INTEGER,
             allowNull: false,
         },
-        password: {
+        passwordHash: {
             type: DataTypes.STRING,
             allowNull: false,
+            field: "password",
         },
         idAvatar: {
             type: DataTypes.INTEGER,
@@ -58,6 +59,11 @@ const Usuarios = db.define<UsuariosInstance>(
     },
     {
         tableName: "Usuarios",
+        defaultScope: {
+            attributes: {
+                exclude: ["passwordHash"],
+            },
+        },
     },
 );
 

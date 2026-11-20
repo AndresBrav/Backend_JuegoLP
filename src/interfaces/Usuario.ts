@@ -8,7 +8,7 @@ export interface Usuario {
 export interface UsuarioActualizado {
     username?: string;
     edad?: number;
-    password?: string;
+    passwordHash?: string;
 }
 
 // Datos que viajan dentro del JWT
@@ -16,7 +16,6 @@ export interface DatosToken {
     id?: number;
     codigo?: string;
     username: string;
-    password: string;
     rol?: Rol;
 }
 

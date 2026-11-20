@@ -43,9 +43,10 @@ const mostrar_Notificacion = async (
     req: AuthenticatedRequest,
     res: Response,
 ) => {
-    const nombre: string = req.DatosToken?.username;
-    const password: string = req.DatosToken?.password;
-    const usuario = await obtenerUnUsuarioServicio(nombre, password);
+    const usuario = await obtenerUnUsuarioServicio(
+        req.DatosToken?.id,
+        req.DatosToken?.username,
+    );
     const usuario_id = usuario.id;
 
     const arreglo_Notificaciones =

@@ -10,6 +10,7 @@ import UsuarioJuegosIA from "../Models/usuario_juegosIAModel";
 
 import { isString, isNumero, esRolDeRegistro } from "../Validations/validaciones";
 import UsuarioEjerciciosGrupo from "../Models/usuario_ejerciciosGrupoModel";
+import { hashContrasena } from "../utils/contrasenas";
 
 export const obtenerTodosLosUsuarios = async (): Promise<
     UsuariosInstance[]
@@ -63,7 +64,7 @@ export const aniadirUsuario = async (
             codigo: codigo.trim(),
             username,
             edad,
-            password,
+            passwordHash: await hashContrasena(password),
             rol: rolFinal,
             idAvatar: 1,
         });
@@ -85,7 +86,7 @@ export const actualizarUsuario = async (
         throw new Error("Usuario no encontrado");
     }
 
-    // Verificar si los tres parÃ¡metros son undefined
+    // Verificar si los tres parámetros son undefined
     if (
         username === undefined &&
         edad === undefined &&
@@ -106,7 +107,7 @@ export const actualizarUsuario = async (
     }
 
     if (password !== undefined && isString(password)) {
-        usuarioActualizado.password = password;
+        usuarioActualizado.passwordHash = await hashContrasena(password);
     }
 
     // Actualizamos el usuario con los campos que no son undefined
@@ -128,16 +129,28 @@ export const borrarUsuario = async (id: string): Promise<boolean> => {
 };
 
 export const obtenerUnUsuarioServicio = async (
-    nombre: string,
-    password: string,
+    id: unknown,
+    username?: unknown,
 ): Promise<UsuariosInstance> => {
-    const usuario = await Usuarios.findOne({
-        where: {
-            username: nombre,
-            password: password,
-        },
-    });
-    return usuario;
+    const idNumerico = Number(id);
+    if (Number.isInteger(idNumerico) && idNumerico > 0) {
+        const usuario = await Usuarios.findByPk(idNumerico);
+        if (!usuario) {
+            throw new Error("Usuario no encontrado");
+        }
+        return usuario;
+    }
+
+    if (typeof username === "string" && username.trim()) {
+        const usuario = await Usuarios.findOne({
+            where: { username: username.trim() },
+        });
+        if (usuario) {
+            return usuario;
+        }
+    }
+
+    throw new Error("Usuario no encontrado");
 };
 
 export const retornarIDAvatar = async (idAva: number): Promise<string> => {
@@ -208,22 +221,20 @@ export const IncrementarPuntosUsuario = async (
 };
 
 export const servicioActualizarFoto = async (
-    nombre: string,
-    password: string,
+    id: number,
     idFoto: string,
 ): Promise<UsuariosInstance> => {
-    try {
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
-        usuario.idAvatar = Number(idFoto);
-        usuario.save();
-        return usuario;
-    } catch (error) {
-        throw error;
+    const usuario = await Usuarios.findByPk(id);
+    if (!usuario) {
+        throw new Error("Usuario no encontrado");
     }
+    usuario.idAvatar = Number(idFoto);
+    await usuario.save();
+    return usuario;
 };
 
 /* ------------------------------------------------------------------ */
-/* AutenticaciÃ³n, registro y perfil                                    */
+/* Autenticación, registro y perfil                                    */
 /* ------------------------------------------------------------------ */
 
 export const buscarUsuarioPorId = async (
@@ -232,11 +243,11 @@ export const buscarUsuarioPorId = async (
     return Usuarios.findByPk(id);
 };
 
-/** Permite iniciar sesiÃ³n con el username o con el cÃ³digo institucional. */
+/** Permite iniciar sesión con el username o con el código institucional. */
 export const buscarUsuarioPorIdentificador = async (
     identificador: string,
 ): Promise<UsuariosInstance | null> => {
-    return Usuarios.findOne({
+    return Usuarios.unscoped().findOne({
         where: {
             [Op.or]: [
                 { username: identificador },
@@ -264,8 +275,10 @@ export const crearUsuario = async (datos: {
     rol: Rol;
     idAvatar?: number;
 }): Promise<UsuariosInstance> => {
+    const { password, ...datosUsuario } = datos;
     return Usuarios.create({
-        ...datos,
+        ...datosUsuario,
+        passwordHash: await hashContrasena(password),
         idAvatar: datos.idAvatar ?? 1,
     });
 };

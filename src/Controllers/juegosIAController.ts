@@ -522,9 +522,10 @@ const traerJuegosController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const juegosIA = await obtenerTodosLosJuegosIA(usuario_id); //llama al Servicio
@@ -574,9 +575,10 @@ const traerJuegosControllerPseudo = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const juegosIA = await obtenerTodosLosJuegosIAPseudo(usuario_id); //llama al Servicio
@@ -649,9 +651,10 @@ const guardarJuegoIAController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const {
@@ -731,9 +734,10 @@ const completarJuegoController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const juego_id = Number(req.params.id);
@@ -785,9 +789,10 @@ const obtenerJuegoIAController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const juego_id = Number(req.params.id);
@@ -850,9 +855,10 @@ const guardarEstadoTableroController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const juego_id = Number(req.params.id);
@@ -916,9 +922,10 @@ const reiniciarEstadoTableroController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = usuario.id;
 
         const juego_id = Number(req.params.id);

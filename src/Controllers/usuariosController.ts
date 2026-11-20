@@ -23,6 +23,7 @@ import {
     existeUsername,
     obtenerPerfilCompleto,
 } from "../Services/usuarioServices";
+import { verificarContrasena } from "../utils/contrasenas";
 import Usuarios, { UsuariosInstance } from "../Models/usuarioModel";
 
 //mejorado
@@ -46,7 +47,6 @@ const firmarToken = (usuario: UsuariosInstance): string => {
         id: usuario.id,
         codigo: usuario.codigo,
         username: usuario.username,
-        password: usuario.password,
         rol: usuario.rol,
     };
 
@@ -515,7 +515,11 @@ const iniciarSesion = async (req: Request, res: Response) => {
 
         const usuario = await buscarUsuarioPorIdentificador(identificador);
 
-        if (!usuario || usuario.password !== password) {
+        if (
+            !usuario ||
+            typeof password !== "string" ||
+            !(await verificarContrasena(usuario.passwordHash, password))
+        ) {
             res.json({
                 msg: "el usuario que ingresaste no existe Registrate",
             });
@@ -531,7 +535,10 @@ const iniciarSesion = async (req: Request, res: Response) => {
 
 const verificarLogin = async (usuario: Usuario): Promise<boolean> => {
     const encontrado = await buscarUsuarioPorIdentificador(usuario.username);
-    return !!encontrado && encontrado.password === usuario.password;
+    return (
+        !!encontrado &&
+        (await verificarContrasena(encontrado.passwordHash, usuario.password))
+    );
 };
 
 /**
@@ -604,9 +611,10 @@ const traerDatosUnUsuario = async (
     req: AuthenticatedRequest,
     res: Response,
 ) => {
-    const nombre: string = req.DatosToken?.username;
-    const password: string = req.DatosToken?.password;
-    const resultado = await obtenerUnUsuarioServicio(nombre, password);
+    const resultado = await obtenerUnUsuarioServicio(
+        req.DatosToken?.id,
+        req.DatosToken?.username,
+    );
 
     const idAva = resultado.idAvatar;
     const idAvatar2 = await retornarIDAvatar(idAva);
@@ -643,9 +651,10 @@ const traerDatosUnUsuario = async (
  *         description: Acceso denegado (sin token)
  */
 const traerPuntuacion = async (req: AuthenticatedRequest, res: Response) => {
-    const nombre: string = req.DatosToken?.username;
-    const password: string = req.DatosToken?.password;
-    const resultado = await obtenerUnUsuarioServicio(nombre, password);
+    const resultado = await obtenerUnUsuarioServicio(
+        req.DatosToken?.id,
+        req.DatosToken?.username,
+    );
     // console.log("desde aqui es el usuario");
     const idUser = resultado.id;
 
@@ -701,9 +710,10 @@ const traerJuegosCompletados = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const idUser = usuario.id;
 
         const juegosCompletados =
@@ -766,9 +776,10 @@ const aumentarPuntuacion = async (
         let idUser = req.usuarioActual?.id;
 
         if (!idUser) {
-            const nombre = req.DatosToken?.username!;
-            const password = req.DatosToken?.password!;
-            const usuario = await obtenerUnUsuarioServicio(nombre, password);
+            const usuario = await obtenerUnUsuarioServicio(
+                req.DatosToken?.id,
+                req.DatosToken?.username,
+            );
             idUser = Number(usuario.id);
         }
 
@@ -857,19 +868,8 @@ const actualizarPefilFoto = async (
 ) => {
     const { idFoto } = req.params;
 
-    const nombre: string = req.DatosToken?.username;
-    const password: string = req.DatosToken?.password;
-
-    // await actualizarPefilFotoServicio(nombre, password, idFoto);
-
-    // const usuario = await obtenerUnUsuarioServicio(nombre, password);
-
-    // usuario.idAvatar = Number(idFoto);
-    // usuario.save();
-
     const usuario: UsuariosInstance = await servicioActualizarFoto(
-        nombre,
-        password,
+        Number(req.DatosToken?.id),
         idFoto,
     );
     res.json({

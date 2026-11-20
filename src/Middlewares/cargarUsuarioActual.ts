@@ -10,7 +10,6 @@ export interface RequestAutenticado extends AuthenticatedRequest {
 /**
  * Después de verifyToken, carga al usuario real desde la base de datos.
  * Así el rol y el código no dependen de un token de 30 días.
- * Soporta tokens antiguos que solo traían username + password.
  */
 const cargarUsuarioActual = async (
     req: RequestAutenticado,
@@ -32,7 +31,6 @@ const cargarUsuarioActual = async (
             : await Usuarios.findOne({
                   where: {
                       username: datos.username,
-                      password: datos.password,
                   },
               });
 

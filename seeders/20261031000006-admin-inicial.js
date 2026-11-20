@@ -1,6 +1,7 @@
 "use strict";
 
 const { QueryTypes } = require("sequelize");
+const argon2 = require("argon2");
 require("dotenv").config();
 
 /**
@@ -39,7 +40,9 @@ module.exports = {
                 codigo,
                 username,
                 edad: 0,
-                password,
+                password: await argon2.hash(password, {
+                    type: argon2.argon2id,
+                }),
                 idAvatar: 1,
                 rol: "admin",
                 createdAt: new Date(),

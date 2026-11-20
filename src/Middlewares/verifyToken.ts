@@ -31,6 +31,12 @@ const verifyToken = (
     try {
         // Verificar y decodificar el token
         const decoded = jwt.verify(token, secretKey) as JwtPayload;
+
+        if (Object.prototype.hasOwnProperty.call(decoded, "password")) {
+            res.status(401).send("Inicia sesión nuevamente");
+            return;
+        }
+
         // console.log(decoded)
         req.DatosToken = decoded;
         next();

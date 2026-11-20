@@ -82,9 +82,10 @@ const obtenerEstadoJuegoController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = Number(usuario.id);
 
         const juego_id = Number(req.params.id);
@@ -148,9 +149,10 @@ const guardarEstadoJuegoController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = Number(usuario.id);
 
         const juego_id = Number(req.params.id);
@@ -212,9 +214,10 @@ const reiniciarEstadoJuegoController = async (
     res: Response,
 ) => {
     try {
-        const nombre: string = req.DatosToken?.username;
-        const password: string = req.DatosToken?.password;
-        const usuario = await obtenerUnUsuarioServicio(nombre, password);
+        const usuario = await obtenerUnUsuarioServicio(
+            req.DatosToken?.id,
+            req.DatosToken?.username,
+        );
         const usuario_id = Number(usuario.id);
 
         const juego_id = Number(req.params.id);
