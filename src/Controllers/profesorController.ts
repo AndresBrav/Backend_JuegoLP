@@ -284,6 +284,7 @@ export const listarEjerciciosController = async (
     try {
         const ejercicios = await listarEjerciciosProfesor(
             idNumerico(req.params.id),
+            req.usuarioActual.id,
         );
         res.json(ejercicios);
     } catch (err) {
@@ -405,6 +406,13 @@ export const calificarEntregaController = async (
     req: RequestAutenticado,
     res: Response,
 ) => {
+    if (req.usuarioActual.rol !== "profesor") {
+        res.status(403).json({
+            message: "Los administradores solo pueden consultar las entregas",
+        });
+        return;
+    }
+
     try {
         const { puntos_profesor, comentario } = req.body ?? {};
         const entrega = await calificarEntrega(
@@ -433,6 +441,13 @@ export const guardarComentarioController = async (
     req: RequestAutenticado,
     res: Response,
 ) => {
+    if (req.usuarioActual.rol !== "profesor") {
+        res.status(403).json({
+            message: "Los administradores solo pueden consultar las entregas",
+        });
+        return;
+    }
+
     try {
         const { comentario } = req.body ?? {};
         const entrega = await guardarComentarioEntrega(

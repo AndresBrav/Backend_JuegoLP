@@ -455,6 +455,7 @@ export const miProgresoEstudiante = async (usuarioId: number) => {
 export const estadisticasGlobales = async () => {
     const [
         estudiantes,
+        profesores,
         admins,
         completadosFijos,
         completadosIA,
@@ -462,8 +463,15 @@ export const estadisticasGlobales = async () => {
         puntosIA,
         ultimaFija,
         ultimaIA,
+        completadosGrupos,
+        puntosGrupos,
+        entregasGrupos,
+        totalGrupos,
+        totalEjerciciosGrupos,
+        gruposConActividad,
     ] = await Promise.all([
         Usuarios.count({ where: { rol: "estudiante" } }),
+        Usuarios.count({ where: { rol: "profesor" } }),
         Usuarios.count({ where: { rol: "admin" } }),
         UsuarioJuegos.count({ where: { completado: true } }),
         UsuarioJuegosIA.count({ where: { completado: true } }),
@@ -471,20 +479,57 @@ export const estadisticasGlobales = async () => {
         UsuarioJuegosIA.sum("puntos"),
         UsuarioJuegos.max("ultima_actividad"),
         UsuarioJuegosIA.max("ultima_actividad"),
+        UsuarioEjerciciosGrupo.count({ where: { completado: true } }),
+        UsuarioEjerciciosGrupo.sum("puntos_profesor"),
+        UsuarioEjerciciosGrupo.findAll({
+            attributes: ["completado", "calificado", "ultima_actividad", "fecha_completado"],
+            raw: true,
+        }),
+        Grupo.count(),
+        EjerciciosGrupo.count(),
+        UsuarioEjerciciosGrupo.max("ultima_actividad"),
     ]);
 
-    const fechas = [ultimaFija, ultimaIA]
+    const pendientesGrupos = (entregasGrupos as any[]).filter(
+        (entrega) =>
+            esVerdadero(entrega.completado) &&
+            !esVerdadero(entrega.calificado),
+    ).length;
+    const fechas = [ultimaFija, ultimaIA, gruposConActividad]
         .filter(Boolean)
         .map((f) => new Date(f as any).getTime())
         .filter((t) => !Number.isNaN(t));
+    for (const entrega of entregasGrupos as any[]) {
+        for (const valor of [
+            entrega.ultima_actividad,
+            entrega.fecha_completado,
+        ]) {
+            if (!valor) continue;
+            const tiempo = new Date(valor).getTime();
+            if (!Number.isNaN(tiempo)) fechas.push(tiempo);
+        }
+    }
 
     return {
-        usuarios: { estudiantes, admins },
-        completados: { fijos: completadosFijos, ia: completadosIA },
+        usuarios: { estudiantes, profesores, admins },
+        completados: {
+            fijos: completadosFijos,
+            ia: completadosIA,
+            grupos: completadosGrupos,
+        },
         puntos: {
             fijos: Number(puntosFijos ?? 0),
             ia: Number(puntosIA ?? 0),
-            total: Number(puntosFijos ?? 0) + Number(puntosIA ?? 0),
+            grupos: Number(puntosGrupos ?? 0),
+            total:
+                Number(puntosFijos ?? 0) +
+                Number(puntosIA ?? 0) +
+                Number(puntosGrupos ?? 0),
+        },
+        grupos: {
+            total: totalGrupos,
+            ejercicios: totalEjerciciosGrupos,
+            pendientes: pendientesGrupos,
         },
         ultimaActividad: fechas.length
             ? new Date(Math.max(...fechas)).toISOString()

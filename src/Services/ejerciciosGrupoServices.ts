@@ -290,9 +290,7 @@ export const crearEjercicioGrupo = async (
 const isNumeroEntero = (v: any): boolean =>
     Number.isInteger(Number(v)) && v !== "" && v !== null;
 
-/** Profesor: ejercicios de su grupo con cuántos estudiantes los
- * completaron (cuenta por fila de entrega del PAR exacto). */
-export const listarEjerciciosProfesor = async (grupoId: number) => {
+const listarEjerciciosGrupo = async (grupoId: number) => {
     const ejercicios = (await EjerciciosGrupo.findAll({
         where: { grupo_id: grupoId },
         order: [["createdAt", "ASC"]],
@@ -310,6 +308,24 @@ export const listarEjerciciosProfesor = async (grupoId: number) => {
             }),
         })),
     );
+};
+
+/** Profesor: ejercicios de un grupo propio. */
+export const listarEjerciciosProfesor = async (
+    grupoId: number,
+    profesorId: number,
+) => {
+    await grupoDelProfesor(grupoId, profesorId);
+    return listarEjerciciosGrupo(grupoId);
+};
+
+/** Administrador: ejercicios de cualquier grupo existente, solo lectura. */
+export const listarEjerciciosAdmin = async (grupoId: number) => {
+    const grupo = await Grupo.findByPk(grupoId);
+    if (!grupo) {
+        throw new Error("El grupo no existe");
+    }
+    return listarEjerciciosGrupo(grupoId);
 };
 
 /** Profesor: edita título/enunciado/tipo/puntos/fecha límite. */
@@ -393,14 +409,7 @@ export const eliminarEjercicioGrupo = async (
     await EjerciciosGrupo.destroy({ where: { id: ejercicioId } });
 };
 
-/** Profesor: TODAS las entregas de un ejercicio (una fila por
- * estudiante: el índice único garantiza la fila única por par). */
-export const listarSolucionesEjercicio = async (
-    ejercicioId: number,
-    profesorId: number,
-) => {
-    await ejercicioDelProfesor(ejercicioId, profesorId);
-
+const listarSoluciones = async (ejercicioId: number) => {
     const entregas = (await UsuarioEjerciciosGrupo.findAll({
         where: { ejercicio_grupo_id: ejercicioId },
         order: [["ultima_actividad", "DESC"]],
@@ -440,6 +449,29 @@ export const listarSolucionesEjercicio = async (
             };
         }),
     );
+};
+
+/** Profesor: todas las entregas de un ejercicio de su grupo. */
+export const listarSolucionesEjercicio = async (
+    ejercicioId: number,
+    profesorId: number,
+) => {
+    await ejercicioDelProfesor(ejercicioId, profesorId);
+    return listarSoluciones(ejercicioId);
+};
+
+/** Administrador: todas las entregas de un ejercicio, solo lectura. */
+export const listarSolucionesEjercicioAdmin = async (
+    grupoId: number,
+    ejercicioId: number,
+) => {
+    const ejercicio = await EjerciciosGrupo.findOne({
+        where: { id: ejercicioId, grupo_id: grupoId },
+    });
+    if (!ejercicio) {
+        throw new Error("El ejercicio no existe en ese grupo");
+    }
+    return listarSoluciones(ejercicioId);
 };
 
 /** Profesor: califica la entrega de UN estudiante en UN ejercicio.

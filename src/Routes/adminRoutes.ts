@@ -6,6 +6,8 @@ import {
     estadisticasController,
     listarEstudiantesController,
     listarGruposAdminController,
+    listarEjerciciosGrupoAdminController,
+    listarSolucionesAdminController,
 } from "../Controllers/adminController";
 import { reporteGrupoController } from "../Controllers/reporteGrupoController";
 
@@ -57,5 +59,30 @@ router.get("/grupos", listarGruposAdminController);
  *       - BearerAuth: []
  */
 router.get("/grupos/:id/reporte", reporteGrupoController);
+
+/**
+ * @swagger
+ * /admin/grupos/{id}/ejercicios:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Consultar ejercicios de cualquier grupo (solo lectura)
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get("/grupos/:id/ejercicios", listarEjerciciosGrupoAdminController);
+
+/**
+ * @swagger
+ * /admin/grupos/{grupoId}/ejercicios/{id}/soluciones:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Consultar soluciones de un ejercicio (solo lectura)
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get(
+    "/grupos/:grupoId/ejercicios/:id/soluciones",
+    listarSolucionesAdminController,
+);
 
 export default router;
