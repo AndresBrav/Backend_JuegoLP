@@ -6,6 +6,7 @@ import {
     estadisticasController,
     listarEstudiantesController,
     listarGruposAdminController,
+    rankingGrupoAdminController,
     listarEjerciciosGrupoAdminController,
     listarSolucionesAdminController,
 } from "../Controllers/adminController";
@@ -48,6 +49,7 @@ router.get("/estudiantes", listarEstudiantesController);
  *       - BearerAuth: []
  */
 router.get("/grupos", listarGruposAdminController);
+router.get("/grupos/:id/ranking", rankingGrupoAdminController);
 
 /**
  * @swagger

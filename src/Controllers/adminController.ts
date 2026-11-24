@@ -5,6 +5,7 @@ import { estadisticasGlobales } from "../Services/reporteServices";
 import {
     listarEjerciciosAdmin,
     listarSolucionesEjercicioAdmin,
+    obtenerRankingGrupo,
 } from "../Services/ejerciciosGrupoServices";
 
 /**
@@ -82,6 +83,48 @@ export const listarGruposAdminController = async (
     } catch (error) {
         console.error("ERROR listarGruposAdminController:", error);
         res.status(500).json({ message: "No se pudieron listar los grupos" });
+    }
+};
+
+/**
+ * @swagger
+ * /admin/grupos/{id}/ranking:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Consultar estudiantes y puntos de un grupo (solo lectura)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Ranking del grupo con códigos SIS
+ */
+export const rankingGrupoAdminController = async (
+    req: RequestAutenticado,
+    res: Response,
+): Promise<void> => {
+    const grupoId = Number(req.params.id);
+    if (!Number.isInteger(grupoId) || grupoId <= 0) {
+        res.status(400).json({
+            message: "El identificador del grupo no es válido",
+        });
+        return;
+    }
+
+    try {
+        res.json(
+            await obtenerRankingGrupo(
+                grupoId,
+                req.usuarioActual.id,
+                "admin",
+            ),
+        );
+    } catch (error) {
+        if (error instanceof Error && error.message === "El grupo no existe") {
+            res.status(404).json({ message: error.message });
+            return;
+        }
+        console.error("ERROR rankingGrupoAdminController:", error);
+        res.status(500).json({ message: "No se pudo consultar el ranking" });
     }
 };
 

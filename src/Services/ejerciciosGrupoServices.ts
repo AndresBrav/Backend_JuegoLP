@@ -7,6 +7,7 @@ import Notificaciones from "../Models/NotificacionesModel";
 import {
     esMiembroDeGrupo,
 } from "./grupoServices";
+import { Rol } from "../interfaces/Usuario";
 import { temarioDelProfesor, esErrorNegocio } from "./temariosGrupoServices";
 
 export type TipoEjercicioGrupo = "diagrama" | "pseudocodigo";
@@ -829,11 +830,13 @@ export const completarEjercicioEstudiante = async (
 };
 
 /** Ranking del grupo: por cada inscrito, puntos SOLO de la calificación
- * del profesor (`puntos_profesor`) y ejercicios completados. Ambos roles
- * pueden consultarlo (profesor dueño o inscrito). */
+ * del profesor (`puntos_profesor`) y ejercicios completados. Profesores
+ * propietarios y estudiantes inscritos lo consultan; admin mediante su ruta
+ * global de solo lectura. */
 export const obtenerRankingGrupo = async (
     grupoId: number,
     solicitanteId: number,
+    solicitanteRol?: Rol,
 ) => {
     const grupo = (await Grupo.findByPk(grupoId, {
         raw: true,
@@ -850,7 +853,7 @@ export const obtenerRankingGrupo = async (
     const esProfesor = grupo.profesor_id === solicitanteId;
     const inscrito = await esMiembroDeGrupo(grupoId, solicitanteId);
 
-    if (!esProfesor && !inscrito) {
+    if (!esProfesor && !inscrito && solicitanteRol !== "admin") {
         throw new Error("No tienes acceso al ranking de este grupo");
     }
 
