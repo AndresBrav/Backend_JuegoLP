@@ -1,10 +1,10 @@
 import TemariosGrupo from "../Models/temariosGrupoModel";
 import EjerciciosGrupo from "../Models/ejerciciosGrupoModel";
 import UsuarioEjerciciosGrupo from "../Models/usuario_ejerciciosGrupoModel";
+import EjercicioGrupoEstudiante from "../Models/ejercicioGrupoEstudianteModel";
 import Grupo from "../Models/grupoModel";
-import {
-    esMiembroDeGrupo,
-} from "./grupoServices";
+import { Op } from "sequelize";
+import { esMiembroDeGrupo } from "./grupoServices";
 
 /** Errores de negocio reconocidos por los controladores (→ 400). */
 export const esErrorNegocio = (err: unknown): boolean => {
@@ -21,6 +21,12 @@ export const esErrorNegocio = (err: unknown): boolean => {
         "inválido",
         "Los puntos",
         "No estás inscrito",
+        "No tienes acceso",
+        "asignación",
+        "seleccionar al menos un estudiante",
+        "seleccionados",
+        "seleccionado válido",
+        "estudiantes seleccionados",
     ].some((f) => msg.includes(f));
 };
 
@@ -197,41 +203,72 @@ export const listarTemariosEstudiante = async (
         throw new Error("No estás inscrito en ese grupo");
     }
 
-    const temarios = (await TemariosGrupo.findAll({
-        where: { grupo_id: grupoId },
-        order: [["orden", "ASC"]],
-        raw: true,
-    })) as unknown as Array<{ id: number; nombre: string; orden: number }>;
+    const [temarios, ejercicios] = await Promise.all([
+        TemariosGrupo.findAll({
+            where: { grupo_id: grupoId },
+            order: [["orden", "ASC"]],
+            raw: true,
+        }) as Promise<Array<{ id: number; nombre: string; orden: number }>>,
+        EjerciciosGrupo.findAll({
+            where: { grupo_id: grupoId },
+            attributes: ["id", "temario_id", "asignacion"],
+            raw: true,
+        }) as Promise<
+            Array<{
+                id: number;
+                temario_id: number;
+                asignacion: "todos" | "seleccionados";
+            }>
+        >,
+    ]);
 
-    return Promise.all(
-        temarios.map(async (t) => {
-            const ejercicios = (await EjerciciosGrupo.findAll({
-                where: { temario_id: t.id },
-                attributes: ["id"],
-                raw: true,
-            })) as unknown as Array<{ id: number }>;
-
-            const ids = ejercicios.map((e) => e.id);
-            const entregas = (await UsuarioEjerciciosGrupo.findAll({
-                where: { usuario_id: estudianteId },
-                attributes: ["ejercicio_grupo_id", "completado"],
-                raw: true,
-            })) as unknown as Array<{
-                ejercicio_grupo_id: number;
-                completado: boolean;
-            }>;
-
-            const completadas = ids.filter((id) =>
-                entregas.some(
-                    (e) => e.ejercicio_grupo_id === id && e.completado,
-                ),
-            ).length;
-
-            return {
-                ...t,
-                total: ids.length,
-                completados: completadas,
-            };
-        }),
+    const idsSeleccionados = ejercicios
+        .filter((ejercicio) => ejercicio.asignacion === "seleccionados")
+        .map((ejercicio) => Number(ejercicio.id));
+    const [asignaciones, entregas] = await Promise.all([
+        idsSeleccionados.length
+            ? (EjercicioGrupoEstudiante.findAll({
+                  where: {
+                      usuario_id: estudianteId,
+                      ejercicio_grupo_id: { [Op.in]: idsSeleccionados },
+                  },
+                  attributes: ["ejercicio_grupo_id"],
+                  raw: true,
+              }) as Promise<Array<{ ejercicio_grupo_id: number }>>)
+            : Promise.resolve([]),
+        UsuarioEjerciciosGrupo.findAll({
+            where: { usuario_id: estudianteId },
+            attributes: ["ejercicio_grupo_id", "completado"],
+            raw: true,
+        }) as Promise<
+            Array<{ ejercicio_grupo_id: number; completado: boolean }>
+        >,
+    ]);
+    const asignados = new Set(
+        asignaciones.map((asignacion) =>
+            Number(asignacion.ejercicio_grupo_id),
+        ),
     );
+    const completados = new Set(
+        entregas
+            .filter((entrega) => entrega.completado)
+            .map((entrega) => Number(entrega.ejercicio_grupo_id)),
+    );
+
+    return temarios.map((temario) => {
+        const idsVisibles = ejercicios
+            .filter(
+                (ejercicio) =>
+                    Number(ejercicio.temario_id) === Number(temario.id) &&
+                    (ejercicio.asignacion !== "seleccionados" ||
+                        asignados.has(Number(ejercicio.id))),
+            )
+            .map((ejercicio) => Number(ejercicio.id));
+
+        return {
+            ...temario,
+            total: idsVisibles.length,
+            completados: idsVisibles.filter((id) => completados.has(id)).length,
+        };
+    });
 };

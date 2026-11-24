@@ -344,9 +344,8 @@ export const listarEjerciciosController = async (
  * /profesor/grupos/{id}/ejercicios:
  *   post:
  *     tags: [Profesor]
- *     summary: Crear ejercicio (título, enunciado, tipo, puntos,
- *       casos_prueba opcionales, fecha_limite opcional YYYY-MM-DD,
- *       temario_id)
+ *     summary: Crear ejercicio de grupo con asignación total o a estudiantes seleccionados
+ *     description: asignacion acepta todos (predeterminado) o seleccionados; para seleccionados enviar estudiantes_ids con IDs de estudiantes inscritos en el grupo.
  *     security:
  *       - BearerAuth: []
  */

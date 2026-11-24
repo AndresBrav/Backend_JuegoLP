@@ -4,9 +4,10 @@ import Grupo from "../Models/grupoModel";
 import GrupoEstudiantes from "../Models/grupoEstudianteModel";
 import Usuarios from "../Models/usuarioModel";
 import Notificaciones from "../Models/NotificacionesModel";
-import {
-    esMiembroDeGrupo,
-} from "./grupoServices";
+import EjercicioGrupoEstudiante from "../Models/ejercicioGrupoEstudianteModel";
+import db from "../db/conexion";
+import { Op } from "sequelize";
+import { esMiembroDeGrupo } from "./grupoServices";
 import { Rol } from "../interfaces/Usuario";
 import { temarioDelProfesor, esErrorNegocio } from "./temariosGrupoServices";
 
@@ -90,6 +91,7 @@ interface EjerciciosGrupoAttributesRaw {
     titulo: string;
     enunciado: string;
     tipo: TipoEjercicioGrupo;
+    asignacion: "todos" | "seleccionados";
     puntos: number;
     fecha_limite: string | null;
     casos_prueba: CasoPruebaGrupo[] | null;
@@ -204,8 +206,7 @@ const validarResultadosCasosPrueba = (
     return resultados;
 };
 
-/** Profesor: crea un ejercicio dentro de un temario de su grupo y
- * notifica a los estudiantes inscritos. */
+/** Profesor: crea un ejercicio y notifica a sus destinatarios actuales. */
 export const crearEjercicioGrupo = async (
     profesorId: number,
     datos: {
@@ -217,6 +218,8 @@ export const crearEjercicioGrupo = async (
         puntos: any;
         fecha_limite: any;
         casos_prueba?: any;
+        asignacion?: any;
+        estudiantes_ids?: any;
     },
 ) => {
     const { grupo_id, temario_id, titulo, enunciado, tipo, puntos } = datos;
@@ -255,41 +258,147 @@ export const crearEjercicioGrupo = async (
 
     const fechaLimite = validarFechaLimite(datos.fecha_limite);
     const casosPrueba = validarCasosPrueba(datos.casos_prueba);
+    const asignacion =
+        datos.asignacion === undefined ? "todos" : datos.asignacion;
+    if (asignacion !== "todos" && asignacion !== "seleccionados") {
+        throw new Error("La asignación del ejercicio es inválida");
+    }
 
-    const ejercicio = await EjerciciosGrupo.create({
-        grupo_id,
-        temario_id,
-        titulo: titulo.trim(),
-        enunciado: enunciado.trim(),
-        tipo,
-        puntos: puntosFinal,
-        fecha_limite: fechaLimite,
-        casos_prueba: casosPrueba.length > 0 ? casosPrueba : null,
+    let estudiantesIds: number[] = [];
+    if (asignacion === "seleccionados") {
+        if (
+            !Array.isArray(datos.estudiantes_ids) ||
+            datos.estudiantes_ids.length === 0 ||
+            datos.estudiantes_ids.some(
+                (id: any) =>
+                    typeof id !== "number" ||
+                    !Number.isSafeInteger(id) ||
+                    id < 1,
+            )
+        ) {
+            throw new Error("Debes seleccionar al menos un estudiante válido");
+        }
+        estudiantesIds = datos.estudiantes_ids.map(Number);
+        if (new Set(estudiantesIds).size !== estudiantesIds.length) {
+            throw new Error(
+                "La lista de estudiantes seleccionados está repetida",
+            );
+        }
+    }
+
+    return db.transaction(async (transaction) => {
+        let destinatariosIds: number[];
+        if (asignacion === "seleccionados") {
+            const [inscripciones, usuariosEstudiantes] = await Promise.all([
+                GrupoEstudiantes.findAll({
+                    where: {
+                        grupo_id,
+                        usuario_id: { [Op.in]: estudiantesIds },
+                    },
+                    attributes: ["usuario_id"],
+                    raw: true,
+                    transaction,
+                }) as Promise<Array<{ usuario_id: number }>>,
+                Usuarios.findAll({
+                    where: {
+                        id: { [Op.in]: estudiantesIds },
+                        rol: "estudiante",
+                    },
+                    attributes: ["id"],
+                    raw: true,
+                    transaction,
+                }) as Promise<Array<{ id: number }>>,
+            ]);
+            const inscritos = new Set(
+                inscripciones.map((inscripcion) =>
+                    Number(inscripcion.usuario_id),
+                ),
+            );
+            const estudiantesValidos = new Set(
+                usuariosEstudiantes.map((usuario) => Number(usuario.id)),
+            );
+            if (
+                estudiantesIds.some(
+                    (id) => !inscritos.has(id) || !estudiantesValidos.has(id),
+                )
+            ) {
+                throw new Error(
+                    "Todos los estudiantes seleccionados deben pertenecer al grupo",
+                );
+            }
+            destinatariosIds = estudiantesIds;
+        } else {
+            const inscripciones = (await GrupoEstudiantes.findAll({
+                where: { grupo_id },
+                attributes: ["usuario_id"],
+                raw: true,
+                transaction,
+            })) as unknown as Array<{ usuario_id: number }>;
+            destinatariosIds = inscripciones.map((i) =>
+                Number(i.usuario_id),
+            );
+        }
+
+        const ejercicio = await EjerciciosGrupo.create(
+            {
+                grupo_id,
+                temario_id,
+                titulo: titulo.trim(),
+                enunciado: enunciado.trim(),
+                tipo,
+                asignacion,
+                puntos: puntosFinal,
+                fecha_limite: fechaLimite,
+                casos_prueba: casosPrueba.length > 0 ? casosPrueba : null,
+            },
+            { transaction },
+        );
+
+        if (asignacion === "seleccionados") {
+            await EjercicioGrupoEstudiante.bulkCreate(
+                estudiantesIds.map((usuario_id) => ({
+                    ejercicio_grupo_id: ejercicio.id,
+                    usuario_id,
+                })),
+                { transaction },
+            );
+        }
+
+        await Promise.all(
+            destinatariosIds.map((usuario_id) =>
+                Notificaciones.create(
+                    {
+                        descripcion: `Nuevo ejercicio de ${tipo}: "${titulo.trim()}"${
+                            fechaLimite ? ` (hasta el ${fechaLimite})` : ""
+                        }`,
+                        usuario_id,
+                    },
+                    { transaction },
+                ),
+            ),
+        );
+
+        return ejercicio;
     });
-
-    // Notificación a los estudiantes inscritos en el grupo.
-    const inscripciones = (await GrupoEstudiantes.findAll({
-        where: { grupo_id },
-        attributes: ["usuario_id"],
-        raw: true,
-    })) as unknown as Array<{ usuario_id: number }>;
-
-    await Promise.all(
-        inscripciones.map((i) =>
-            Notificaciones.create({
-                descripcion: `Nuevo ejercicio de ${tipo}: "${titulo.trim()}"${
-                    fechaLimite ? ` (hasta el ${fechaLimite})` : ""
-                }`,
-                usuario_id: i.usuario_id,
-            }),
-        ),
-    );
-
-    return ejercicio;
 };
 
 const isNumeroEntero = (v: any): boolean =>
     Number.isInteger(Number(v)) && v !== "" && v !== null;
+
+const puedeAccederEjercicio = async (
+    ejercicio: EjerciciosGrupoAttributesRaw,
+    estudianteId: number,
+): Promise<boolean> => {
+    if (ejercicio.asignacion !== "seleccionados") return true;
+    return Boolean(
+        await EjercicioGrupoEstudiante.findOne({
+            where: {
+                ejercicio_grupo_id: ejercicio.id,
+                usuario_id: estudianteId,
+            },
+        }),
+    );
+};
 
 const listarEjerciciosGrupo = async (grupoId: number) => {
     const ejercicios = (await EjerciciosGrupo.findAll({
@@ -596,6 +705,27 @@ export const listarEjerciciosEstudiante = async (
         order: [["createdAt", "ASC"]],
         raw: true,
     })) as unknown as EjerciciosGrupoAttributesRaw[];
+    const idsEjercicios = ejercicios.map((ejercicio) => ejercicio.id);
+    const asignaciones = idsEjercicios.length
+        ? ((await EjercicioGrupoEstudiante.findAll({
+              where: {
+                  usuario_id: estudianteId,
+                  ejercicio_grupo_id: { [Op.in]: idsEjercicios },
+              },
+              attributes: ["ejercicio_grupo_id"],
+              raw: true,
+          })) as unknown as Array<{ ejercicio_grupo_id: number }>)
+        : [];
+    const idsAsignados = new Set(
+        asignaciones.map((asignacion) =>
+            Number(asignacion.ejercicio_grupo_id),
+        ),
+    );
+    const ejerciciosVisibles = ejercicios.filter(
+        (ejercicio) =>
+            ejercicio.asignacion !== "seleccionados" ||
+            idsAsignados.has(ejercicio.id),
+    );
 
     const misEntregas = (await UsuarioEjerciciosGrupo.findAll({
         where: { usuario_id: estudianteId },
@@ -615,7 +745,7 @@ export const listarEjerciciosEstudiante = async (
         puntos_profesor: number | null;
     }>;
 
-    return ejercicios.map((e) => {
+    return ejerciciosVisibles.map((e) => {
         const mia = misEntregas.find(
             (m) => m.ejercicio_grupo_id === e.id,
         );
@@ -659,6 +789,9 @@ export const obtenerEjercicioEstudiante = async (
 
     if (!ejercicio) {
         throw new Error("El ejercicio no existe en ese grupo");
+    }
+    if (!(await puedeAccederEjercicio(ejercicio, estudianteId))) {
+        throw new Error("No tienes acceso a este ejercicio");
     }
 
     const [entrega] = await UsuarioEjerciciosGrupo.findOrCreate({
@@ -709,6 +842,9 @@ export const guardarEstadoEjercicio = async (
     const inscrito = await esMiembroDeGrupo(grupoId, estudianteId);
     if (!inscrito) {
         throw new Error("No estás inscrito en ese grupo");
+    }
+    if (!(await puedeAccederEjercicio(ejercicio, estudianteId))) {
+        throw new Error("No tienes acceso a este ejercicio");
     }
 
     if (estaVencido(ejercicio)) {
@@ -762,6 +898,9 @@ export const completarEjercicioEstudiante = async (
     const inscrito = await esMiembroDeGrupo(grupoId, estudianteId);
     if (!inscrito) {
         throw new Error("No estás inscrito en ese grupo");
+    }
+    if (!(await puedeAccederEjercicio(ejercicio, estudianteId))) {
+        throw new Error("No tienes acceso a este ejercicio");
     }
 
     if (estaVencido(ejercicio)) {
@@ -862,9 +1001,50 @@ export const obtenerRankingGrupo = async (
         attributes: ["usuario_id"],
         raw: true,
     })) as unknown as Array<{ usuario_id: number }>;
+    const ejerciciosGrupo = (await EjerciciosGrupo.findAll({
+        where: { grupo_id: grupoId },
+        attributes: ["id", "asignacion"],
+        raw: true,
+    })) as unknown as Array<{
+        id: number;
+        asignacion: "todos" | "seleccionados";
+    }>;
+    const asignaciones = ejerciciosGrupo.length
+        ? ((await EjercicioGrupoEstudiante.findAll({
+              where: {
+                  ejercicio_grupo_id: {
+                      [Op.in]: ejerciciosGrupo.map((ejercicio) => ejercicio.id),
+                  },
+              },
+              attributes: ["ejercicio_grupo_id", "usuario_id"],
+              raw: true,
+          })) as unknown as Array<{
+              ejercicio_grupo_id: number;
+              usuario_id: number;
+          }>)
+        : [];
+    const estudiantesPorEjercicio = new Map<number, Set<number>>();
+    for (const asignacion of asignaciones) {
+        const ejercicioId = Number(asignacion.ejercicio_grupo_id);
+        const estudiantes =
+            estudiantesPorEjercicio.get(ejercicioId) ?? new Set<number>();
+        estudiantes.add(Number(asignacion.usuario_id));
+        estudiantesPorEjercicio.set(ejercicioId, estudiantes);
+    }
 
     const filas = await Promise.all(
         inscripciones.map(async (i) => {
+            const idsGrupo = new Set(
+                ejerciciosGrupo
+                    .filter(
+                        (ejercicio) =>
+                            ejercicio.asignacion !== "seleccionados" ||
+                            estudiantesPorEjercicio
+                                .get(Number(ejercicio.id))
+                                ?.has(Number(i.usuario_id)) === true,
+                    )
+                    .map((ejercicio) => Number(ejercicio.id)),
+            );
             const u = (await Usuarios.findByPk(i.usuario_id, {
                 attributes: ["id", "codigo", "username"],
                 raw: true,
@@ -890,16 +1070,8 @@ export const obtenerRankingGrupo = async (
                 puntos_profesor: number | null;
             }>;
 
-            // Solo cuentan las entregas de ejercicios DE ESTE grupo.
-            const ejerciciosGrupo = (await EjerciciosGrupo.findAll({
-                where: { grupo_id: grupoId },
-                attributes: ["id"],
-                raw: true,
-            })) as unknown as Array<{ id: number }>;
-            const idsGrupo = new Set(ejerciciosGrupo.map((e) => e.id));
-
             const delGrupo = entregas.filter((e) =>
-                idsGrupo.has(e.ejercicio_grupo_id),
+                idsGrupo.has(Number(e.ejercicio_grupo_id)),
             );
 
             const completados = delGrupo.filter((e) => e.completado).length;

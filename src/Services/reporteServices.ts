@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import Grupo from "../Models/grupoModel";
 import GrupoEstudiantes from "../Models/grupoEstudianteModel";
 import EjerciciosGrupo from "../Models/ejerciciosGrupoModel";
+import EjercicioGrupoEstudiante from "../Models/ejercicioGrupoEstudianteModel";
 import TemariosGrupo from "../Models/temariosGrupoModel";
 import UsuarioEjerciciosGrupo from "../Models/usuario_ejerciciosGrupoModel";
 import Juegos from "../Models/juegoModel";
@@ -18,6 +19,7 @@ interface EjercicioReporte {
     puntos: number;
     fecha_limite: string | null;
     tipo: "diagrama" | "pseudocodigo";
+    asignacion: "todos" | "seleccionados";
     createdAt: Date | string;
 }
 
@@ -171,6 +173,7 @@ export const reporteGrupo = async (
                     "puntos",
                     "fecha_limite",
                     "tipo",
+                    "asignacion",
                     "createdAt",
                 ],
                 order: [["createdAt", "ASC"]],
@@ -186,7 +189,7 @@ export const reporteGrupo = async (
     const estudianteIds = inscripcionesRaw.map((i) => Number(i.usuario_id));
     const ejercicioIds = ejerciciosRaw.map((e) => Number(e.id));
 
-    const [estudiantesRaw, entregasRaw] = await Promise.all([
+    const [estudiantesRaw, entregasRaw, asignacionesRaw] = await Promise.all([
         estudianteIds.length
             ? (Usuarios.findAll({
                   where: { id: { [Op.in]: estudianteIds } },
@@ -218,6 +221,15 @@ export const reporteGrupo = async (
                   raw: true,
               }) as Promise<EntregaReporte[]>)
             : Promise.resolve([]),
+        ejercicioIds.length
+            ? (EjercicioGrupoEstudiante.findAll({
+                  where: { ejercicio_grupo_id: { [Op.in]: ejercicioIds } },
+                  attributes: ["ejercicio_grupo_id", "usuario_id"],
+                  raw: true,
+              }) as Promise<
+                  Array<{ ejercicio_grupo_id: number; usuario_id: number }>
+              >)
+            : Promise.resolve([]),
     ]);
 
     const temarioPorId = new Map(
@@ -235,6 +247,33 @@ export const reporteGrupo = async (
             entrega,
         ]),
     );
+    const estudiantesPorEjercicio = new Map<number, Set<number>>();
+    for (const asignacion of asignacionesRaw) {
+        const ejercicioId = Number(asignacion.ejercicio_grupo_id);
+        const estudiantes = estudiantesPorEjercicio.get(ejercicioId) ?? new Set();
+        estudiantes.add(Number(asignacion.usuario_id));
+        estudiantesPorEjercicio.set(ejercicioId, estudiantes);
+    }
+    const estudianteTieneAcceso = (
+        ejercicio: EjercicioReporte,
+        estudianteId: number,
+    ): boolean =>
+        ejercicio.asignacion !== "seleccionados" ||
+        estudiantesPorEjercicio
+            .get(Number(ejercicio.id))
+            ?.has(estudianteId) === true;
+    const ejercicioPorId = new Map(
+        ejerciciosRaw.map((ejercicio) => [Number(ejercicio.id), ejercicio]),
+    );
+    const entregasAsignadasRaw = entregasRaw.filter((entrega) => {
+        const ejercicio = ejercicioPorId.get(
+            Number(entrega.ejercicio_grupo_id),
+        );
+        return (
+            ejercicio !== undefined &&
+            estudianteTieneAcceso(ejercicio, Number(entrega.usuario_id))
+        );
+    });
 
     const estadisticasPorEjercicio = new Map(
         ejerciciosRaw.map((ejercicio) => [
@@ -246,21 +285,25 @@ export const reporteGrupo = async (
                 sinIniciar: 0,
                 calificados: 0,
                 pendientesCalificar: 0,
+                estudiantesAsignados: 0,
             },
         ]),
     );
 
     const estudiantes = estudiantesRaw.map((estudiante) => {
         const id = Number(estudiante.id);
+        const ejerciciosAsignados = ejerciciosRaw.filter((ejercicio) =>
+            estudianteTieneAcceso(ejercicio, id),
+        );
         const metricas = resumirEntregas(
-            ejerciciosRaw,
+            ejerciciosAsignados,
             id,
             entregasPorEstudianteEjercicio,
         );
         const porTemario = temariosRaw.map((temario) => ({
             temario_id: Number(temario.id),
             ...resumirEntregas(
-                ejerciciosRaw.filter(
+                ejerciciosAsignados.filter(
                     (ejercicio) =>
                         Number(ejercicio.temario_id) === Number(temario.id),
                 ),
@@ -270,10 +313,12 @@ export const reporteGrupo = async (
         }));
 
         for (const ejercicio of ejerciciosRaw) {
+            if (!estudianteTieneAcceso(ejercicio, id)) continue;
             const estadisticas = estadisticasPorEjercicio.get(
                 Number(ejercicio.id),
             );
             if (!estadisticas) continue;
+            estadisticas.estudiantesAsignados += 1;
 
             const entrega = entregasPorEstudianteEjercicio.get(
                 `${id}:${Number(ejercicio.id)}`,
@@ -316,7 +361,10 @@ export const reporteGrupo = async (
         };
     });
 
-    const tareasPosibles = estudiantes.length * ejerciciosRaw.length;
+    const tareasPosibles = estudiantes.reduce(
+        (total, estudiante) => total + estudiante.ejerciciosTotales,
+        0,
+    );
     const completados = estudiantes.reduce(
         (total, estudiante) => total + estudiante.completados,
         0,
@@ -362,10 +410,17 @@ export const reporteGrupo = async (
             ...ejercicio,
             temario:
                 temarioPorId.get(Number(ejercicio.temario_id))?.nombre ?? "",
+            estudiantes_asignados_ids:
+                ejercicio.asignacion === "seleccionados"
+                    ? Array.from(
+                          estudiantesPorEjercicio.get(Number(ejercicio.id)) ??
+                              new Set<number>(),
+                      )
+                    : estudianteIds,
             ...estadisticasPorEjercicio.get(Number(ejercicio.id)),
         })),
         estudiantes,
-        entregas: entregasRaw.map((entrega) => ({
+        entregas: entregasAsignadasRaw.map((entrega) => ({
             ejercicio_id: Number(entrega.ejercicio_grupo_id),
             usuario_id: Number(entrega.usuario_id),
             estado_tablero: entrega.estado_tablero,

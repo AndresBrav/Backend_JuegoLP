@@ -9,6 +9,7 @@ export interface EjerciciosGrupoAttributes {
     titulo?: string;
     enunciado?: string;
     tipo?: "diagrama" | "pseudocodigo";
+    asignacion?: "todos" | "seleccionados";
     puntos?: number;
     fecha_limite?: string | null;
     casos_prueba?: Array<{
@@ -62,6 +63,11 @@ const EjerciciosGrupo = db.define<EjerciciosGrupoInstance>(
         tipo: {
             type: DataTypes.ENUM("diagrama", "pseudocodigo"),
             allowNull: false,
+        },
+        asignacion: {
+            type: DataTypes.ENUM("todos", "seleccionados"),
+            allowNull: false,
+            defaultValue: "todos",
         },
         puntos: {
             type: DataTypes.INTEGER,
