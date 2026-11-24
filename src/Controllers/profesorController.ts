@@ -19,6 +19,7 @@ import {
     crearEjercicioGrupo,
     listarEjerciciosProfesor,
     editarEjercicioGrupo,
+    actualizarAsignacionEjercicioGrupo,
     eliminarEjercicioGrupo,
     listarSolucionesEjercicio,
     calificarEntrega,
@@ -385,6 +386,34 @@ export const editarEjercicioController = async (
             req.body ?? {},
         );
         res.json({ msg: "ejercicio actualizado" });
+    } catch (err) {
+        responderError(res, err);
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/ejercicios/{id}/asignacion:
+ *   put:
+ *     tags: [Profesor]
+ *     summary: Cambiar destinatarios del ejercicio
+ *     description: asignacion acepta todos o seleccionados; en modo seleccionados se envían estudiantes_ids. Las entregas de quienes quedan sin asignación se eliminan permanentemente.
+ *     security:
+ *       - BearerAuth: []
+ */
+export const actualizarAsignacionEjercicioController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    try {
+        const { asignacion, estudiantes_ids } = req.body ?? {};
+        const resultado = await actualizarAsignacionEjercicioGrupo(
+            idNumerico(req.params.id),
+            req.usuarioActual.id,
+            asignacion,
+            estudiantes_ids,
+        );
+        res.json(resultado);
     } catch (err) {
         responderError(res, err);
     }

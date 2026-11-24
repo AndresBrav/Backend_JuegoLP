@@ -16,6 +16,7 @@ import {
     listarEjerciciosController,
     crearEjercicioController,
     editarEjercicioController,
+    actualizarAsignacionEjercicioController,
     eliminarEjercicioController,
     listarSolucionesController,
     calificarEntregaController,
@@ -47,6 +48,10 @@ router.delete("/temarios/:id", eliminarTemarioController);
 router.get("/grupos/:id/ejercicios", listarEjerciciosController);
 router.post("/grupos/:id/ejercicios", crearEjercicioController);
 router.put("/ejercicios/:id", editarEjercicioController);
+router.put(
+    "/ejercicios/:id/asignacion",
+    actualizarAsignacionEjercicioController,
+);
 router.delete("/ejercicios/:id", eliminarEjercicioController);
 router.get("/ejercicios/:id/soluciones", listarSolucionesController);
 router.put(

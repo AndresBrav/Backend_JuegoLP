@@ -12,6 +12,7 @@ import { Rol } from "../interfaces/Usuario";
 import { temarioDelProfesor, esErrorNegocio } from "./temariosGrupoServices";
 
 export type TipoEjercicioGrupo = "diagrama" | "pseudocodigo";
+type AsignacionEjercicioGrupo = "todos" | "seleccionados";
 
 export interface CasoPruebaGrupo {
     entradas: string[];
@@ -102,6 +103,43 @@ interface EjerciciosGrupoAttributesRaw {
 const MAX_CASOS_PRUEBA = 20;
 const MAX_LINEAS_CASO = 20;
 const MAX_LONGITUD_LINEA_CASO = 500;
+
+const validarAsignacionEjercicio = (
+    asignacionRecibida: any,
+    estudiantesRecibidos: any,
+): { asignacion: AsignacionEjercicioGrupo; estudiantesIds: number[] } => {
+    const asignacion =
+        asignacionRecibida === undefined ? "todos" : asignacionRecibida;
+    if (asignacion !== "todos" && asignacion !== "seleccionados") {
+        throw new Error("La asignación del ejercicio es inválida");
+    }
+
+    if (asignacion !== "seleccionados") {
+        return { asignacion, estudiantesIds: [] };
+    }
+
+    if (
+        !Array.isArray(estudiantesRecibidos) ||
+        estudiantesRecibidos.length === 0 ||
+        estudiantesRecibidos.some(
+            (id: any) =>
+                typeof id !== "number" ||
+                !Number.isSafeInteger(id) ||
+                id < 1,
+        )
+    ) {
+        throw new Error("Debes seleccionar al menos un estudiante válido");
+    }
+
+    if (new Set(estudiantesRecibidos).size !== estudiantesRecibidos.length) {
+        throw new Error("La lista de estudiantes seleccionados está repetida");
+    }
+
+    return {
+        asignacion,
+        estudiantesIds: estudiantesRecibidos,
+    };
+};
 
 const validarLineasCaso = (valor: any, campo: string): string[] => {
     if (!Array.isArray(valor) || valor.length > MAX_LINEAS_CASO) {
@@ -258,33 +296,10 @@ export const crearEjercicioGrupo = async (
 
     const fechaLimite = validarFechaLimite(datos.fecha_limite);
     const casosPrueba = validarCasosPrueba(datos.casos_prueba);
-    const asignacion =
-        datos.asignacion === undefined ? "todos" : datos.asignacion;
-    if (asignacion !== "todos" && asignacion !== "seleccionados") {
-        throw new Error("La asignación del ejercicio es inválida");
-    }
-
-    let estudiantesIds: number[] = [];
-    if (asignacion === "seleccionados") {
-        if (
-            !Array.isArray(datos.estudiantes_ids) ||
-            datos.estudiantes_ids.length === 0 ||
-            datos.estudiantes_ids.some(
-                (id: any) =>
-                    typeof id !== "number" ||
-                    !Number.isSafeInteger(id) ||
-                    id < 1,
-            )
-        ) {
-            throw new Error("Debes seleccionar al menos un estudiante válido");
-        }
-        estudiantesIds = datos.estudiantes_ids.map(Number);
-        if (new Set(estudiantesIds).size !== estudiantesIds.length) {
-            throw new Error(
-                "La lista de estudiantes seleccionados está repetida",
-            );
-        }
-    }
+    const { asignacion, estudiantesIds } = validarAsignacionEjercicio(
+        datos.asignacion,
+        datos.estudiantes_ids,
+    );
 
     return db.transaction(async (transaction) => {
         let destinatariosIds: number[];
@@ -406,10 +421,56 @@ const listarEjerciciosGrupo = async (grupoId: number) => {
         order: [["createdAt", "ASC"]],
         raw: true,
     })) as unknown as EjerciciosGrupoAttributesRaw[];
+    const idsEjerciciosSeleccionados = ejercicios
+        .filter((ejercicio) => ejercicio.asignacion === "seleccionados")
+        .map((ejercicio) => ejercicio.id);
+    const asignaciones = idsEjerciciosSeleccionados.length
+        ? ((await EjercicioGrupoEstudiante.findAll({
+              where: {
+                  ejercicio_grupo_id: {
+                      [Op.in]: idsEjerciciosSeleccionados,
+                  },
+              },
+              attributes: ["ejercicio_grupo_id", "usuario_id"],
+              raw: true,
+          })) as unknown as Array<{
+              ejercicio_grupo_id: number;
+              usuario_id: number;
+          }>)
+        : [];
+    const usuariosIds = [...new Set(asignaciones.map((a) => Number(a.usuario_id)))];
+    const usuariosAsignados = usuariosIds.length
+        ? ((await Usuarios.findAll({
+              where: { id: { [Op.in]: usuariosIds } },
+              attributes: ["id", "codigo", "username"],
+              raw: true,
+          })) as unknown as Array<{
+              id: number;
+              codigo: string;
+              username: string;
+          }>)
+        : [];
+    const usuarioPorId = new Map(
+        usuariosAsignados.map((usuario) => [Number(usuario.id), usuario]),
+    );
+    const asignacionesPorEjercicio = new Map<number, number[]>();
+    for (const asignacion of asignaciones) {
+        const ejercicioId = Number(asignacion.ejercicio_grupo_id);
+        const ids = asignacionesPorEjercicio.get(ejercicioId) ?? [];
+        ids.push(Number(asignacion.usuario_id));
+        asignacionesPorEjercicio.set(ejercicioId, ids);
+    }
 
     return Promise.all(
         ejercicios.map(async (e) => ({
             ...e,
+            estudiantes_asignados_ids:
+                asignacionesPorEjercicio.get(e.id) ?? [],
+            estudiantes_asignados: (
+                asignacionesPorEjercicio.get(e.id) ?? []
+            )
+                .map((id) => usuarioPorId.get(id))
+                .filter(Boolean),
             completados: await UsuarioEjerciciosGrupo.count({
                 where: { ejercicio_grupo_id: e.id, completado: true },
             }),
@@ -508,6 +569,167 @@ export const editarEjercicioGrupo = async (
     }
 
     await EjerciciosGrupo.update(cambios, { where: { id: ejercicioId } });
+};
+
+/** Profesor: cambia destinatarios y elimina entregas de quienes quedan fuera. */
+export const actualizarAsignacionEjercicioGrupo = async (
+    ejercicioId: number,
+    profesorId: number,
+    asignacionRecibida: any,
+    estudiantesRecibidos: any,
+) => {
+    const ejercicioAutorizado = await ejercicioDelProfesor(
+        ejercicioId,
+        profesorId,
+    );
+    if (asignacionRecibida === undefined) {
+        throw new Error("La asignación del ejercicio es obligatoria");
+    }
+
+    const { asignacion, estudiantesIds } = validarAsignacionEjercicio(
+        asignacionRecibida,
+        estudiantesRecibidos,
+    );
+
+    return db.transaction(async (transaction) => {
+        const ejercicio = await EjerciciosGrupo.findByPk(ejercicioId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+        });
+        if (!ejercicio) {
+            throw new Error("El ejercicio no existe");
+        }
+
+        const grupoId = Number(ejercicio.grupo_id);
+        const asignacionAnterior =
+            ejercicio.asignacion ?? ejercicioAutorizado.asignacion ?? "todos";
+        const [inscripciones, asignacionesAnteriores] = await Promise.all([
+            GrupoEstudiantes.findAll({
+                where: { grupo_id: grupoId },
+                attributes: ["usuario_id"],
+                raw: true,
+                transaction,
+            }) as Promise<Array<{ usuario_id: number }>>,
+            EjercicioGrupoEstudiante.findAll({
+                where: { ejercicio_grupo_id: ejercicioId },
+                attributes: ["usuario_id"],
+                raw: true,
+                transaction,
+            }) as Promise<Array<{ usuario_id: number }>>,
+        ]);
+        const idsMiembros = inscripciones.map((fila) => Number(fila.usuario_id));
+        const idsAsignadosAntes = new Set(
+            asignacionesAnteriores.map((fila) => Number(fila.usuario_id)),
+        );
+        const usuariosEstudiantes = idsMiembros.length
+            ? ((await Usuarios.findAll({
+                  where: {
+                      id: { [Op.in]: idsMiembros },
+                      rol: "estudiante",
+                  },
+                  attributes: ["id"],
+                  raw: true,
+                  transaction,
+              })) as unknown as Array<{ id: number }>)
+            : [];
+        const idsEstudiantesDelGrupo = new Set(
+            usuariosEstudiantes.map((usuario) => Number(usuario.id)),
+        );
+
+        let destinatariosIds: number[];
+        if (asignacion === "seleccionados") {
+            const usuariosElegibles = (await Usuarios.findAll({
+                where: {
+                    id: { [Op.in]: estudiantesIds },
+                    rol: "estudiante",
+                },
+                attributes: ["id"],
+                raw: true,
+                transaction,
+            })) as unknown as Array<{ id: number }>;
+            const idsElegibles = new Set(
+                usuariosElegibles.map((usuario) => Number(usuario.id)),
+            );
+            if (
+                estudiantesIds.some(
+                    (id) =>
+                        !idsElegibles.has(id) ||
+                        (!idsEstudiantesDelGrupo.has(id) &&
+                            !idsAsignadosAntes.has(id)),
+                )
+            ) {
+                throw new Error(
+                    "Todos los estudiantes seleccionados deben pertenecer al grupo",
+                );
+            }
+            destinatariosIds = estudiantesIds;
+        } else {
+            destinatariosIds = [...idsEstudiantesDelGrupo];
+        }
+
+        const asignadosAntes = new Set(
+            asignacionAnterior === "seleccionados"
+                ? [...idsAsignadosAntes]
+                : [...idsEstudiantesDelGrupo],
+        );
+        if (asignacionAnterior === "todos") {
+            const entregasAnteriores = (await UsuarioEjerciciosGrupo.findAll({
+                where: { ejercicio_grupo_id: ejercicioId },
+                attributes: ["usuario_id"],
+                raw: true,
+                transaction,
+            })) as unknown as Array<{ usuario_id: number }>;
+            for (const entrega of entregasAnteriores) {
+                asignadosAntes.add(Number(entrega.usuario_id));
+            }
+        }
+        const destinatariosActuales = new Set(destinatariosIds);
+        const nuevosDestinatarios = destinatariosIds.filter(
+            (id) =>
+                idsEstudiantesDelGrupo.has(id) && !asignadosAntes.has(id),
+        );
+
+        await ejercicio.update({ asignacion }, { transaction });
+        await EjercicioGrupoEstudiante.destroy({
+            where: { ejercicio_grupo_id: ejercicioId },
+            transaction,
+        });
+
+        if (asignacion === "seleccionados") {
+            await EjercicioGrupoEstudiante.bulkCreate(
+                estudiantesIds.map((usuario_id) => ({
+                    ejercicio_grupo_id: ejercicioId,
+                    usuario_id,
+                })),
+                { transaction },
+            );
+            await UsuarioEjerciciosGrupo.destroy({
+                where: {
+                    ejercicio_grupo_id: ejercicioId,
+                    usuario_id: { [Op.notIn]: [...destinatariosActuales] },
+                },
+                transaction,
+            });
+        }
+
+        await Promise.all(
+            nuevosDestinatarios.map((usuario_id) =>
+                Notificaciones.create(
+                    {
+                        descripcion: `Nuevo ejercicio de ${ejercicio.tipo}: "${ejercicio.titulo}"${
+                            ejercicio.fecha_limite
+                                ? ` (hasta el ${ejercicio.fecha_limite})`
+                                : ""
+                        }`,
+                        usuario_id,
+                    },
+                    { transaction },
+                ),
+            ),
+        );
+
+        return { asignacion, estudiantes_ids: destinatariosIds };
+    });
 };
 
 /** Profesor: elimina el ejercicio (en cascada sus entregas). */
