@@ -4,6 +4,7 @@ import {
     crearGrupo,
     listarGruposProfesor,
     obtenerGrupoProfesor,
+    agregarEstudiantesPorCodigo,
     eliminarGrupo,
 } from "../Services/grupoServices";
 import {
@@ -116,6 +117,52 @@ export const obtenerGrupoController = async (
             return;
         }
         res.json(grupo);
+    } catch (err) {
+        responderError(res, err);
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/grupos/{id}/estudiantes:
+ *   post:
+ *     tags: [Profesor]
+ *     summary: Inscribir estudiantes en un grupo mediante códigos SIS
+ *     description: Acepta entre 1 y 100 códigos institucionales. Cada resultado indica si fue agregado, ya estaba inscrito, no existe o no corresponde a un estudiante.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [codigos]
+ *             properties:
+ *               codigos:
+ *                 type: array
+ *                 minItems: 1
+ *                 maxItems: 100
+ *                 items:
+ *                   type: string
+ *                   minLength: 4
+ *                   maxLength: 20
+ *                   pattern: '^[A-Za-z0-9]{4,20}$'
+ *     responses:
+ *       201:
+ *         description: Resultados de inscripción por código
+ */
+export const agregarEstudiantesController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    try {
+        const resultados = await agregarEstudiantesPorCodigo(
+            idNumerico(req.params.id),
+            req.usuarioActual.id,
+            req.body?.codigos,
+        );
+        res.status(201).json({ resultados });
     } catch (err) {
         responderError(res, err);
     }

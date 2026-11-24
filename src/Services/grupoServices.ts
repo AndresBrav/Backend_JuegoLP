@@ -1,7 +1,9 @@
 import crypto from "crypto";
+import { Op, UniqueConstraintError } from "sequelize";
 import Grupo from "../Models/grupoModel";
 import GrupoEstudiantes from "../Models/grupoEstudianteModel";
 import Usuarios from "../Models/usuarioModel";
+import { esCodigoValido, normalizarCodigo } from "../Validations/validaciones";
 
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -201,6 +203,106 @@ export const obtenerGrupoProfesor = async (
         ...grupo,
         estudiantes: estudiantes.filter(Boolean),
     };
+};
+
+export type EstadoInscripcionSIS =
+    | "agregado"
+    | "ya_inscrito"
+    | "no_encontrado"
+    | "no_es_estudiante";
+
+export interface ResultadoInscripcionSIS {
+    codigo: string;
+    estado: EstadoInscripcionSIS;
+}
+
+/** Profesor: inscribe estudiantes del grupo mediante sus códigos SIS. */
+export const agregarEstudiantesPorCodigo = async (
+    grupoId: number,
+    profesorId: number,
+    codigos: string[],
+): Promise<ResultadoInscripcionSIS[]> => {
+    if (
+        !Array.isArray(codigos) ||
+        codigos.length < 1 ||
+        codigos.length > 100 ||
+        codigos.some((codigo) => !esCodigoValido(codigo))
+    ) {
+        throw new Error(
+            "La lista debe tener entre 1 y 100 códigos SIS válidos",
+        );
+    }
+
+    const grupo = await Grupo.findOne({
+        where: { id: grupoId, profesor_id: profesorId },
+    });
+    if (!grupo) {
+        throw new Error("No existe ese grupo o no te pertenece");
+    }
+
+    const codigosPorClave = new Map(
+        codigos.map((codigo) => {
+            const normalizado = normalizarCodigo(codigo);
+            return [normalizado.toLowerCase(), normalizado] as const;
+        }),
+    );
+    const codigosUnicos = [...codigosPorClave.values()];
+    const usuarios = (await Usuarios.findAll({
+        where: { codigo: { [Op.in]: codigosUnicos } },
+        attributes: ["id", "codigo", "rol"],
+        raw: true,
+    })) as unknown as Array<{
+        id: number;
+        codigo: string;
+        rol: string;
+    }>;
+    const usuariosPorCodigo = new Map(
+        usuarios.map((usuario) => [usuario.codigo.toLowerCase(), usuario]),
+    );
+    const idsEstudiantes = usuarios
+        .filter((usuario) => usuario.rol === "estudiante")
+        .map((usuario) => usuario.id);
+    const inscripciones = (await GrupoEstudiantes.findAll({
+        where: {
+            grupo_id: grupoId,
+            usuario_id: { [Op.in]: idsEstudiantes },
+        },
+        attributes: ["usuario_id"],
+        raw: true,
+    })) as unknown as Array<{ usuario_id: number }>;
+    const inscritos = new Set(inscripciones.map((fila) => fila.usuario_id));
+
+    const resultados: ResultadoInscripcionSIS[] = [];
+    for (const codigo of codigosUnicos) {
+        const usuario = usuariosPorCodigo.get(codigo.toLowerCase());
+        if (!usuario) {
+            resultados.push({ codigo, estado: "no_encontrado" });
+            continue;
+        }
+        if (usuario.rol !== "estudiante") {
+            resultados.push({ codigo, estado: "no_es_estudiante" });
+            continue;
+        }
+        if (inscritos.has(usuario.id)) {
+            resultados.push({ codigo, estado: "ya_inscrito" });
+            continue;
+        }
+
+        try {
+            await GrupoEstudiantes.create({
+                grupo_id: grupoId,
+                usuario_id: usuario.id,
+                fecha_union: new Date().toISOString().slice(0, 10),
+            });
+            inscritos.add(usuario.id);
+            resultados.push({ codigo, estado: "agregado" });
+        } catch (error) {
+            if (!(error instanceof UniqueConstraintError)) throw error;
+            resultados.push({ codigo, estado: "ya_inscrito" });
+        }
+    }
+
+    return resultados;
 };
 
 /** Profesor: elimina SU grupo (en cascada borra temarios, ejercicios
