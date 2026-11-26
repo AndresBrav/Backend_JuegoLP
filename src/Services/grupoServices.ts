@@ -188,12 +188,13 @@ export const obtenerGrupoProfesor = async (
     const estudiantes = await Promise.all(
         inscripciones.map(async (i) => {
             const u = (await Usuarios.findByPk(i.usuario_id, {
-                attributes: ["id", "codigo", "username"],
+                attributes: ["id", "codigo", "username", "correo"],
                 raw: true,
             })) as unknown as {
                 id: number;
                 codigo: string;
                 username: string;
+                correo: string | null;
             } | null;
             return u ? { ...u, fecha_union: i.fecha_union } : null;
         }),

@@ -193,11 +193,11 @@ export const reporteGrupo = async (
         estudianteIds.length
             ? (Usuarios.findAll({
                   where: { id: { [Op.in]: estudianteIds } },
-                  attributes: ["id", "codigo", "username"],
+                  attributes: ["id", "codigo", "username", "correo"],
                   order: [["username", "ASC"]],
                   raw: true,
               }) as Promise<
-                  Array<{ id: number; codigo: string; username: string }>
+                  Array<{ id: number; codigo: string; username: string; correo: string | null }>
               >)
             : Promise.resolve([]),
         estudianteIds.length && ejercicioIds.length
@@ -355,6 +355,7 @@ export const reporteGrupo = async (
             id,
             codigo: estudiante.codigo,
             username: estudiante.username,
+            correo: estudiante.correo ?? null,
             fecha_union: inscripcionPorId.get(id) ?? null,
             ...metricas,
             porTemario,

@@ -1268,12 +1268,13 @@ export const obtenerRankingGrupo = async (
                     .map((ejercicio) => Number(ejercicio.id)),
             );
             const u = (await Usuarios.findByPk(i.usuario_id, {
-                attributes: ["id", "codigo", "username"],
+                attributes: ["id", "codigo", "username", "correo"],
                 raw: true,
             })) as unknown as {
                 id: number;
                 codigo: string;
                 username: string;
+                correo: string | null;
             } | null;
 
             const entregas = (await UsuarioEjerciciosGrupo.findAll({
@@ -1306,8 +1307,8 @@ export const obtenerRankingGrupo = async (
 
             return {
                 estudiante: u
-                    ? { id: u.id, codigo: u.codigo, username: u.username }
-                    : { id: i.usuario_id, codigo: "", username: "desconocido" },
+                    ? { id: u.id, codigo: u.codigo, username: u.username, correo: u.correo ?? null }
+                    : { id: i.usuario_id, codigo: "", username: "desconocido", correo: null },
                 completados,
                 puntos,
             };
