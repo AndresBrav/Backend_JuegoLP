@@ -494,7 +494,7 @@ export const miProgresoEstudiante = async (usuarioId: number) => {
             id: Number(usuario.id),
             codigo: usuario.codigo,
             username: usuario.username,
-            edad: usuario.edad,
+            correo: usuario.correo ?? null,
             rol: usuario.rol,
         },
         resumen: {

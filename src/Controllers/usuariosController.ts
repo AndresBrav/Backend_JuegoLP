@@ -20,6 +20,7 @@ import {
     buscarUsuarioPorIdentificador,
     crearUsuario,
     existeCodigo,
+    existeCorreo,
     existeUsername,
     obtenerPerfilCompleto,
 } from "../Services/usuarioServices";
@@ -211,7 +212,7 @@ const consultarDetalle = async (req: AuthenticatedRequest, res: Response) => {
  */
 const ingresar = async (req: Request, res: Response) => {
     try {
-        const { codigo, username, edad, password, rol } = req.body ?? {};
+        const { codigo, username, correo, password, rol } = req.body ?? {};
 
         if (!codigo) {
             res.status(400).json({
@@ -223,7 +224,7 @@ const ingresar = async (req: Request, res: Response) => {
         const datosCorrectos: boolean = await aniadirUsuario(
             codigo,
             username,
-            edad,
+            correo,
             password,
             rol,
         );
@@ -298,10 +299,10 @@ const ingresar = async (req: Request, res: Response) => {
 const actualizar = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { username, edad, password } = req.body;
+        const { username, correo, password } = req.body;
         const datosCorrectos: boolean = await actualizarUsuario(
             username,
-            edad,
+            correo,
             password,
             id,
         );
@@ -424,16 +425,17 @@ const borrar = async (req: Request, res: Response) => {
  */
 const RegistrarLogin = async (req: Request, res: Response) => {
     try {
-        const { codigo, username, edad, password, rol } = req.body ?? {};
+        const { codigo, username, correo, password, rol } = req.body ?? {};
 
-        if (!codigo || !username || !edad || !password) {
+        if (!codigo || !username || !correo || !password) {
             res.status(400).json({ message: "Faltan datos en la solicitud" });
             return;
         }
 
         const codigoNormalizado = normalizarCodigo(String(codigo));
         const usernameNormalizado = String(username).trim();
-        const edadNumero = Number(edad);
+        const correoNormalizado = String(correo).trim().toLowerCase();
+        const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (!esCodigoValido(codigoNormalizado)) {
             res.status(400).json({
@@ -448,12 +450,8 @@ const RegistrarLogin = async (req: Request, res: Response) => {
             return;
         }
 
-        if (
-            !Number.isInteger(edadNumero) ||
-            edadNumero <= 0 ||
-            edadNumero > 120
-        ) {
-            res.status(400).json({ message: "Edad inválida" });
+        if (!regexCorreo.test(correoNormalizado)) {
+            res.status(400).json({ message: "Correo electrónico inválido" });
             return;
         }
 
@@ -478,10 +476,17 @@ const RegistrarLogin = async (req: Request, res: Response) => {
             return;
         }
 
+        if (await existeCorreo(correoNormalizado)) {
+            res.status(409).json({
+                message: `El correo ${correoNormalizado} ya está registrado`,
+            });
+            return;
+        }
+
         const usuario = await crearUsuario({
             codigo: codigoNormalizado,
             username: usernameNormalizado,
-            edad: edadNumero,
+            correo: correoNormalizado,
             password: String(password),
             // El rol se elige en el registro (estudiante o profesor);
             // admin sigue fuera del registro público.
@@ -621,7 +626,7 @@ const traerDatosUnUsuario = async (
 
     res.json({
         nombre: resultado.username,
-        edad: resultado.edad,
+        correo: resultado.correo ?? null,
         idAvatar: idAvatar2,
     });
 };

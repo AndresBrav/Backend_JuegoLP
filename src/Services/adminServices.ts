@@ -130,7 +130,7 @@ export const listarGruposAdmin = async () => {
 export const listarEstudiantes = async () => {
     const estudiantes = await Usuarios.findAll({
         where: { rol: "estudiante" },
-        attributes: ["id", "codigo", "username", "edad", "createdAt"],
+        attributes: ["id", "codigo", "username", "correo", "createdAt"],
         order: [["username", "ASC"]],
         raw: true,
     });

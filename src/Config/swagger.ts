@@ -41,7 +41,7 @@ const swaggerOptions: Options = {
                             example: "201904950",
                         },
                         username: { type: "string", description: "Nombre de usuario" },
-                        edad: { type: "integer", description: "Edad del usuario" },
+                        correo: { type: "string", description: "Correo electrónico del usuario" },
                         password: { type: "string", description: "Contraseña del usuario" },
                         idAvatar: { type: "integer", description: "Identificador del avatar asignado" },
                         rol: {

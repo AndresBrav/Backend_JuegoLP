@@ -7,7 +7,7 @@ export interface Usuario {
 
 export interface UsuarioActualizado {
     username?: string;
-    edad?: number;
+    correo?: string;
     passwordHash?: string;
 }
 

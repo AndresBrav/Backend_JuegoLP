@@ -39,7 +39,7 @@ module.exports = {
             {
                 codigo,
                 username,
-                edad: 0,
+                correo: "admin@plataforma.edu.bo",
                 password: await argon2.hash(password, {
                     type: argon2.argon2id,
                 }),

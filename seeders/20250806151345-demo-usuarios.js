@@ -10,7 +10,7 @@ module.exports = {
                 {
                     codigo: "201900006",
                     username: "jurgen",
-                    edad: 25,
+                    correo: "jurgen@demo.com",
                     password: await argon2.hash("123456", {
                         type: argon2.argon2id,
                     }),
@@ -22,7 +22,7 @@ module.exports = {
                 {
                     codigo: "201900002",
                     username: "maria",
-                    edad: 30,
+                    correo: "maria@demo.com",
                     password: await argon2.hash("abcdef", {
                         type: argon2.argon2id,
                     }),
@@ -34,7 +34,7 @@ module.exports = {
                 {
                     codigo: "201900003",
                     username: "juan",
-                    edad: 28,
+                    correo: "juan@demo.com",
                     password: await argon2.hash("qwerty", {
                         type: argon2.argon2id,
                     }),

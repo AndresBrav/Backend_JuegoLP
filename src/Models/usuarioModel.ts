@@ -10,7 +10,7 @@ interface UsuariosAttributes {
     id?: number;
     codigo?: string;
     username?: string;
-    edad?: number;
+    correo?: string;
     passwordHash?: string;
     idAvatar?: number;
     rol?: Rol;
@@ -38,9 +38,10 @@ const Usuarios = db.define<UsuariosInstance>(
             allowNull: false,
             unique: true,
         },
-        edad: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
+        correo: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            unique: true,
         },
         passwordHash: {
             type: DataTypes.STRING,

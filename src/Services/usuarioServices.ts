@@ -47,13 +47,13 @@ export const consultarDetalleUsuario = async (
 export const aniadirUsuario = async (
     codigo: any,
     username: any,
-    edad: any,
+    correo: any,
     password: any,
     rol: any = "estudiante",
 ): Promise<boolean> => {
     if (
         isString(codigo) &&
-        isNumero(edad) &&
+        isString(correo) &&
         isString(username) &&
         isString(password)
     ) {
@@ -63,7 +63,7 @@ export const aniadirUsuario = async (
         await Usuarios.create({
             codigo: codigo.trim(),
             username,
-            edad,
+            correo: correo.trim().toLowerCase(),
             passwordHash: await hashContrasena(password),
             rol: rolFinal,
             idAvatar: 1,
@@ -76,7 +76,7 @@ export const aniadirUsuario = async (
 
 export const actualizarUsuario = async (
     username: any,
-    edad: any,
+    correo: any,
     password: any,
     id: string,
 ): Promise<boolean> => {
@@ -89,7 +89,7 @@ export const actualizarUsuario = async (
     // Verificar si los tres parámetros son undefined
     if (
         username === undefined &&
-        edad === undefined &&
+        correo === undefined &&
         password === undefined
     ) {
         throw new Error("No se proporcionaron campos para actualizar");
@@ -102,8 +102,8 @@ export const actualizarUsuario = async (
         usuarioActualizado.username = username;
     }
 
-    if (edad !== undefined && isNumero(edad)) {
-        usuarioActualizado.edad = edad;
+    if (correo !== undefined && isString(correo)) {
+        usuarioActualizado.correo = correo.trim().toLowerCase();
     }
 
     if (password !== undefined && isString(password)) {
@@ -262,6 +262,13 @@ export const existeUsername = async (username: string): Promise<boolean> => {
     return total > 0;
 };
 
+export const existeCorreo = async (correo: string): Promise<boolean> => {
+    const total = await Usuarios.count({
+        where: { correo: correo.trim().toLowerCase() },
+    });
+    return total > 0;
+};
+
 export const existeCodigo = async (codigo: string): Promise<boolean> => {
     const total = await Usuarios.count({ where: { codigo } });
     return total > 0;
@@ -270,7 +277,7 @@ export const existeCodigo = async (codigo: string): Promise<boolean> => {
 export const crearUsuario = async (datos: {
     codigo: string;
     username: string;
-    edad: number;
+    correo?: string;
     password: string;
     rol: Rol;
     idAvatar?: number;
@@ -278,6 +285,7 @@ export const crearUsuario = async (datos: {
     const { password, ...datosUsuario } = datos;
     return Usuarios.create({
         ...datosUsuario,
+        correo: datosUsuario.correo ? datosUsuario.correo.trim().toLowerCase() : undefined,
         passwordHash: await hashContrasena(password),
         idAvatar: datos.idAvatar ?? 1,
     });
@@ -318,7 +326,7 @@ export const obtenerPerfilCompleto = async (id: number) => {
         id,
         codigo: usuario.codigo,
         username: usuario.username,
-        edad: usuario.edad,
+        correo: usuario.correo ?? null,
         rol: usuario.rol,
         avatarUrl: avatar ? avatar.url : null,
         puntos: puntosFijos + puntosIA + puntosGrupos,
