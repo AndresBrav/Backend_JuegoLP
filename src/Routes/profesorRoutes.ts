@@ -7,6 +7,7 @@ import {
     listarGruposController,
     obtenerGrupoController,
     agregarEstudiantesController,
+    buscarEstudiantesController,
     eliminarGrupoController,
     listarTemariosController,
     crearTemarioController,
@@ -35,6 +36,7 @@ router.post("/grupos", crearGrupoController);
 router.get("/grupos", listarGruposController);
 router.get("/grupos/:id", obtenerGrupoController);
 router.post("/grupos/:id/estudiantes", agregarEstudiantesController);
+router.get("/grupos/:id/buscar-estudiantes", buscarEstudiantesController);
 router.delete("/grupos/:id", eliminarGrupoController);
 
 // Temarios dentro del grupo

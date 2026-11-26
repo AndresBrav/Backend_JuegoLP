@@ -5,6 +5,7 @@ import {
     listarGruposProfesor,
     obtenerGrupoProfesor,
     agregarEstudiantesPorCodigo,
+    buscarEstudiantesParaGrupo,
     eliminarGrupo,
 } from "../Services/grupoServices";
 import {
@@ -158,12 +159,52 @@ export const agregarEstudiantesController = async (
     res: Response,
 ) => {
     try {
+        const identificadores = req.body?.identificadores ?? req.body?.codigos;
         const resultados = await agregarEstudiantesPorCodigo(
             idNumerico(req.params.id),
             req.usuarioActual.id,
-            req.body?.codigos,
+            identificadores,
         );
         res.status(201).json({ resultados });
+    } catch (err) {
+        responderError(res, err);
+    }
+};
+
+/**
+ * @swagger
+ * /profesor/grupos/{id}/buscar-estudiantes:
+ *   get:
+ *     tags: [Profesor]
+ *     summary: Buscar estudiantes en el sistema por nombre, código o correo
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de estudiantes encontrados con estado de inscripción
+ */
+export const buscarEstudiantesController = async (
+    req: RequestAutenticado,
+    res: Response,
+) => {
+    try {
+        const query = String(req.query.q ?? "");
+        const estudiantes = await buscarEstudiantesParaGrupo(
+            idNumerico(req.params.id),
+            req.usuarioActual.id,
+            query,
+        );
+        res.json({ estudiantes });
     } catch (err) {
         responderError(res, err);
     }

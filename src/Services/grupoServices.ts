@@ -216,7 +216,76 @@ export interface ResultadoInscripcionSIS {
     estado: EstadoInscripcionSIS;
 }
 
-/** Profesor: inscribe estudiantes del grupo mediante sus códigos SIS. */
+export interface UsuarioBusquedaGrupo {
+    id: number;
+    username: string;
+    codigo: string;
+    correo: string | null;
+    yaInscrito: boolean;
+}
+
+/** Profesor: busca estudiantes por coincidencia en nombre, código o correo para sugerirlos al inscribir. */
+export const buscarEstudiantesParaGrupo = async (
+    grupoId: number,
+    profesorId: number,
+    query: string,
+): Promise<UsuarioBusquedaGrupo[]> => {
+    const grupo = await Grupo.findOne({
+        where: { id: grupoId, profesor_id: profesorId },
+    });
+    if (!grupo) {
+        throw new Error("No existe ese grupo o no te pertenece");
+    }
+
+    const termino = query.trim();
+    const whereCondicion: any = { rol: "estudiante" };
+
+    if (termino) {
+        whereCondicion[Op.or] = [
+            { username: { [Op.like]: `%${termino}%` } },
+            { codigo: { [Op.like]: `%${termino}%` } },
+            { correo: { [Op.like]: `%${termino}%` } },
+        ];
+    }
+
+    const usuarios = (await Usuarios.findAll({
+        where: whereCondicion,
+        attributes: ["id", "username", "codigo", "correo"],
+        order: [["username", "ASC"]],
+        raw: true,
+    })) as unknown as Array<{
+        id: number;
+        username: string;
+        codigo: string;
+        correo: string | null;
+    }>;
+
+    if (usuarios.length === 0) {
+        return [];
+    }
+
+    const idsUsuarios = usuarios.map((u) => u.id);
+    const inscripciones = (await GrupoEstudiantes.findAll({
+        where: {
+            grupo_id: grupoId,
+            usuario_id: { [Op.in]: idsUsuarios },
+        },
+        attributes: ["usuario_id"],
+        raw: true,
+    })) as unknown as Array<{ usuario_id: number }>;
+
+    const inscritos = new Set(inscripciones.map((fila) => fila.usuario_id));
+
+    return usuarios.map((u) => ({
+        id: u.id,
+        username: u.username,
+        codigo: u.codigo,
+        correo: u.correo ?? null,
+        yaInscrito: inscritos.has(u.id),
+    }));
+};
+
+/** Profesor: inscribe estudiantes del grupo mediante sus códigos SIS, username o correo. */
 export const agregarEstudiantesPorCodigo = async (
     grupoId: number,
     profesorId: number,
@@ -225,11 +294,10 @@ export const agregarEstudiantesPorCodigo = async (
     if (
         !Array.isArray(codigos) ||
         codigos.length < 1 ||
-        codigos.length > 100 ||
-        codigos.some((codigo) => !esCodigoValido(codigo))
+        codigos.length > 100
     ) {
         throw new Error(
-            "La lista debe tener entre 1 y 100 códigos SIS válidos",
+            "La lista debe tener entre 1 y 100 elementos",
         );
     }
 
@@ -240,28 +308,37 @@ export const agregarEstudiantesPorCodigo = async (
         throw new Error("No existe ese grupo o no te pertenece");
     }
 
-    const codigosPorClave = new Map(
-        codigos.map((codigo) => {
-            const normalizado = normalizarCodigo(codigo);
-            return [normalizado.toLowerCase(), normalizado] as const;
-        }),
-    );
-    const codigosUnicos = [...codigosPorClave.values()];
+    const elementosLimpios = codigos
+        .map((c) => String(c).trim())
+        .filter(Boolean);
+
+    if (elementosLimpios.length === 0) {
+        throw new Error("No se proporcionaron identificadores válidos");
+    }
+
+    // Buscamos usuarios que coincidan por codigo, username o correo
     const usuarios = (await Usuarios.findAll({
-        where: { codigo: { [Op.in]: codigosUnicos } },
-        attributes: ["id", "codigo", "rol"],
+        where: {
+            [Op.or]: [
+                { codigo: { [Op.in]: elementosLimpios } },
+                { username: { [Op.in]: elementosLimpios } },
+                { correo: { [Op.in]: elementosLimpios.map((e) => e.toLowerCase()) } },
+            ],
+        },
+        attributes: ["id", "codigo", "username", "correo", "rol"],
         raw: true,
     })) as unknown as Array<{
         id: number;
         codigo: string;
+        username: string;
+        correo: string | null;
         rol: string;
     }>;
-    const usuariosPorCodigo = new Map(
-        usuarios.map((usuario) => [usuario.codigo.toLowerCase(), usuario]),
-    );
+
     const idsEstudiantes = usuarios
         .filter((usuario) => usuario.rol === "estudiante")
         .map((usuario) => usuario.id);
+
     const inscripciones = (await GrupoEstudiantes.findAll({
         where: {
             grupo_id: grupoId,
@@ -273,18 +350,26 @@ export const agregarEstudiantesPorCodigo = async (
     const inscritos = new Set(inscripciones.map((fila) => fila.usuario_id));
 
     const resultados: ResultadoInscripcionSIS[] = [];
-    for (const codigo of codigosUnicos) {
-        const usuario = usuariosPorCodigo.get(codigo.toLowerCase());
+    for (const valorOriginal of elementosLimpios) {
+        const valorNormalizado = valorOriginal.toLowerCase();
+        // Buscar si coincide por codigo, username o correo
+        const usuario = usuarios.find(
+            (u) =>
+                u.codigo.toLowerCase() === valorNormalizado ||
+                u.username.toLowerCase() === valorNormalizado ||
+                (u.correo && u.correo.toLowerCase() === valorNormalizado),
+        );
+
         if (!usuario) {
-            resultados.push({ codigo, estado: "no_encontrado" });
+            resultados.push({ codigo: valorOriginal, estado: "no_encontrado" });
             continue;
         }
         if (usuario.rol !== "estudiante") {
-            resultados.push({ codigo, estado: "no_es_estudiante" });
+            resultados.push({ codigo: valorOriginal, estado: "no_es_estudiante" });
             continue;
         }
         if (inscritos.has(usuario.id)) {
-            resultados.push({ codigo, estado: "ya_inscrito" });
+            resultados.push({ codigo: valorOriginal, estado: "ya_inscrito" });
             continue;
         }
 
@@ -295,10 +380,10 @@ export const agregarEstudiantesPorCodigo = async (
                 fecha_union: new Date().toISOString().slice(0, 10),
             });
             inscritos.add(usuario.id);
-            resultados.push({ codigo, estado: "agregado" });
+            resultados.push({ codigo: valorOriginal, estado: "agregado" });
         } catch (error) {
             if (!(error instanceof UniqueConstraintError)) throw error;
-            resultados.push({ codigo, estado: "ya_inscrito" });
+            resultados.push({ codigo: valorOriginal, estado: "ya_inscrito" });
         }
     }
 
